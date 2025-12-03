@@ -2,7 +2,7 @@ extends Node
 
 ## Core game state for Card Combiner - deck-based merge game
 
-const VERSION: String = "0.1.3"
+const VERSION: String = "0.1"
 const SAVE_PATH: String = "user://card_combiner_save.cfg"
 
 signal points_changed(new_value: int)
@@ -282,6 +282,7 @@ func get_pack_cost() -> int:
 func get_sell_value(card: Dictionary) -> int:
 	if card.is_empty():
 		return 0
+	@warning_ignore("integer_division")
 	return maxi(1, get_card_points_value(card) / 10)
 
 # ===== LOGGING =====
@@ -536,7 +537,7 @@ func _roll_card_rank(min_rank: int = 1) -> int:
 func get_current_milestone() -> Dictionary:
 	if current_milestone_index >= 20:
 		return {}  # Game complete
-	
+	@warning_ignore("integer_division")
 	var tier = (current_milestone_index / 4) + 1
 	var type_index = current_milestone_index % 4
 	

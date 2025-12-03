@@ -6,6 +6,7 @@ extends Panel
 signal merge_attempted(source_slot: Slot, target_slot: Slot)
 signal move_attempted(source_slot: Slot, target_slot: Slot)
 signal hover_started(slot: Slot)
+signal discard_requested(slot: Slot)
 
 var slot_index: int = -1
 
@@ -148,27 +149,16 @@ func play_land_animation() -> void:
 	card_container.scale = Vector2(0.8, 0.8)
 	card_container.pivot_offset = card_container.size / 2
 	
-	_anim_tween.tween_property(card_container, "scale", Vector2(1.08, 1.08), 0.1)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	_anim_tween.tween_property(card_container, "scale", Vector2(1.0, 1.0), 0.08)\
-		.set_ease(Tween.EASE_IN_OUT)
+	_anim_tween.tween_property(card_container, "scale", Vector2(1.0, 1.0), 0.15).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 
 func play_merge_animation() -> void:
 	_kill_tween()
 	_anim_tween = create_tween()
 	
-	card_container.scale = Vector2(0.7, 0.7)
+	card_container.scale = Vector2(1.2, 1.2)
 	card_container.pivot_offset = card_container.size / 2
 	
-	_anim_tween.tween_property(card_container, "scale", Vector2(1.25, 1.25), 0.15)\
-		.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	_anim_tween.tween_property(card_container, "scale", Vector2(0.92, 0.92), 0.1)\
-		.set_ease(Tween.EASE_IN_OUT)
-	_anim_tween.tween_property(card_container, "scale", Vector2(1.0, 1.0), 0.08)\
-		.set_ease(Tween.EASE_OUT)
-
-func play_return_animation() -> void:
-	play_land_animation()
+	_anim_tween.tween_property(card_container, "scale", Vector2(1.0, 1.0), 0.2).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_ELASTIC)
 
 # === Drag and Drop ===
 
@@ -190,12 +180,8 @@ func _get_drag_data(_pos: Vector2) -> Variant:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_DRAG_END:
-		if _is_drag_origin:
-			_is_drag_origin = false
-			_update_display()
-			if not card_data.is_empty():
-				play_return_animation()
-		_set_drop_state(DropState.NONE)
+		_is_drag_origin = false
+		_update_display()
 
 func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 	if not data is Dictionary:
@@ -209,19 +195,16 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 		_set_drop_state(DropState.NONE)
 		return false
 	
+	# Emit hover signal for grid to track
 	hover_started.emit(self)
 	
-	# If this is the source slot, allow (will be a no-op)
-	if source == "hand" and data.get("slot") == self:
-		return true
-	
+	# Can always drop on empty slot
 	if card_data.is_empty():
 		_set_drop_state(DropState.VALID_MOVE)
 		return true
 	
-	# Check merge validity
-	var result = GameState.validate_merge(incoming_card, card_data)
-	if result == GameState.MergeResult.VALID:
+	# Check for merge
+	if GameState.can_merge(incoming_card, card_data):
 		_set_drop_state(DropState.VALID_MERGE)
 		return true
 	else:
@@ -295,14 +278,12 @@ func _log_merge_failure(card1: Dictionary, card2: Dictionary) -> void:
 			GameState.log_event("Cannot merge: max rank reached")
 
 func _create_drag_preview() -> Control:
-	var rank = card_data.get("rank", 1)
-	var tier = card_data.get("tier", 1)
-	
 	var preview = Panel.new()
 	preview.custom_minimum_size = Vector2(90, 110)
 	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	var style = StyleBoxFlat.new()
+	var rank = card_data.get("rank", 1)
 	var color_index = clampi(rank - 1, 0, RANK_COLORS.size() - 1)
 	style.bg_color = RANK_COLORS[color_index].darkened(0.2)
 	style.border_width_left = 2
@@ -319,34 +300,18 @@ func _create_drag_preview() -> Control:
 	var vbox = VBoxContainer.new()
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview.add_child(vbox)
 	
+	var tier = card_data.get("tier", 1)
+	
 	var tier_lbl = Label.new()
-	tier_lbl.text = "Tier %s" % TIER_NUMERALS[tier] if tier > 0 else ""
+	tier_lbl.text = "Tier %s" % TIER_NUMERALS[tier]
 	tier_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	tier_lbl.add_theme_color_override("font_color", Color.WHITE)
-	tier_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-	tier_lbl.add_theme_constant_override("outline_size", 2)
-	tier_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(tier_lbl)
 	
 	var rank_lbl = Label.new()
 	rank_lbl.text = "Rank %d" % rank
 	rank_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	rank_lbl.add_theme_color_override("font_color", Color.WHITE)
-	rank_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-	rank_lbl.add_theme_constant_override("outline_size", 2)
-	rank_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(rank_lbl)
-	
-	var output_lbl = Label.new()
-	output_lbl.text = "+%d/s" % GameState.get_card_points_value(card_data)
-	output_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	output_lbl.add_theme_color_override("font_color", Color.WHITE)
-	output_lbl.add_theme_color_override("font_outline_color", Color.BLACK)
-	output_lbl.add_theme_constant_override("outline_size", 2)
-	output_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_child(output_lbl)
 	
 	return preview

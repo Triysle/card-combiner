@@ -16,7 +16,7 @@ var milestone_slots: Array[MilestoneSlot] = []
 func _ready() -> void:
 	unlock_button.pressed.connect(_on_unlock_pressed)
 	GameState.milestone_changed.connect(_update_display)
-	GameState.has_bought_pack  # We show after first pack
+	# Note: Panel visibility is controlled by main.gd based on GameState.has_bought_pack
 	
 	_create_slots()
 	_update_display()
