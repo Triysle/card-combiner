@@ -83,7 +83,7 @@ func _create_upgrade_button(upgrade_id: String) -> Control:
 	
 	return container
 
-func _update_buttons() -> void:
+func _update_buttons(_value: int = 0) -> void:
 	for upgrade_id in upgrade_buttons:
 		var button: Button = upgrade_buttons[upgrade_id]
 		var level = GameState._get_upgrade_level(upgrade_id)

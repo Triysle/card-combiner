@@ -127,9 +127,9 @@ func _create_card_display(card: Dictionary, face_down: bool) -> Control:
 	panel.add_child(vbox)
 	
 	if face_down:
-		# Card back - diamond symbol
+		# Card back - diamond symbol (using U+25C6 black diamond for browser compatibility)
 		var symbol = Label.new()
-		symbol.text = "♦"
+		symbol.text = "◆"
 		symbol.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		symbol.add_theme_color_override("font_color", CARD_BACK_SYMBOL_COLOR)
 		symbol.add_theme_font_size_override("font_size", 32)

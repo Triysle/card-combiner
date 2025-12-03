@@ -2,7 +2,7 @@ extends Node
 
 ## Core game state for Card Combiner - deck-based merge game
 
-const VERSION: String = "0.1.1"
+const VERSION: String = "0.1.3"
 const SAVE_PATH: String = "user://card_combiner_save.cfg"
 
 signal points_changed(new_value: int)

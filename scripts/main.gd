@@ -17,6 +17,9 @@ var settings_popup: PopupPanel
 var deck_viewer_button: Button
 var deck_viewer_popup: PopupPanel
 
+# Reset confirmation
+var reset_confirm_dialog: ConfirmationDialog
+
 const DECK_VIEWER_SCENE = preload("res://scenes/deck_viewer.tscn")
 const PACK_OPENING_SCENE = preload("res://scenes/pack_opening.tscn")
 
@@ -42,7 +45,7 @@ func _ready() -> void:
 
 func _setup_settings_ui() -> void:
 	settings_button = Button.new()
-	settings_button.text = "⚙ Settings"
+	settings_button.text = "Settings"
 	settings_button.pressed.connect(_on_settings_pressed)
 	settings_button.custom_minimum_size = Vector2(100, 32)
 	
@@ -109,11 +112,20 @@ func _setup_settings_ui() -> void:
 	popup_vbox.add_child(version_label)
 	
 	add_child(settings_popup)
+	
+	# Create reset confirmation dialog
+	reset_confirm_dialog = ConfirmationDialog.new()
+	reset_confirm_dialog.title = "Confirm Reset"
+	reset_confirm_dialog.dialog_text = "Are you sure you want to reset?\nAll progress will be lost!"
+	reset_confirm_dialog.ok_button_text = "Reset"
+	reset_confirm_dialog.cancel_button_text = "Cancel"
+	reset_confirm_dialog.confirmed.connect(_on_reset_confirmed)
+	add_child(reset_confirm_dialog)
 
 func _setup_deck_viewer() -> void:
 	# Create deck viewer button (goes in center panel, near booster button)
 	deck_viewer_button = Button.new()
-	deck_viewer_button.text = "📋 View Deck"
+	deck_viewer_button.text = "View Deck"
 	deck_viewer_button.custom_minimum_size = Vector2(120, 32)
 	deck_viewer_button.pressed.connect(_on_deck_viewer_pressed)
 	deck_viewer_button.visible = false  # Hidden until unlocked
@@ -139,10 +151,15 @@ func _on_save_pressed() -> void:
 	settings_popup.hide()
 
 func _on_reset_pressed() -> void:
-	# Delete save file and reload
+	settings_popup.hide()
+	reset_confirm_dialog.popup_centered()
+
+func _on_reset_confirmed() -> void:
+	# Delete save file
 	var dir = DirAccess.open("user://")
 	if dir:
 		dir.remove("card_combiner_save.cfg")
+	# Reload the scene to start fresh
 	get_tree().reload_current_scene()
 
 func _on_merge_attempted(source_index: int, target_index: int) -> void:
