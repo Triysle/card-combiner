@@ -1,0 +1,43 @@
+[gd_scene load_steps=2 format=3 uid="uid://milestone_panel"]
+
+[ext_resource type="Script" path="res://scripts/milestone_panel.gd" id="1_mp"]
+
+[node name="MilestonePanel" type="VBoxContainer"]
+custom_minimum_size = Vector2(240, 0)
+theme_override_constants/separation = 8
+script = ExtResource("1_mp")
+
+[node name="TitleLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "MILESTONE"
+horizontal_alignment = 1
+
+[node name="TierLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.65, 0.7, 1)
+theme_override_font_sizes/font_size = 12
+text = "Tier I"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="."]
+layout_mode = 2
+
+[node name="SlotsContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 8
+
+[node name="RewardLabel" type="Label" parent="."]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.7, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+text = "+1 hand slot"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="UnlockButton" type="Button" parent="."]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+disabled = true
+text = "Need Cards"

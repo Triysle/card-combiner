@@ -1,0 +1,51 @@
+[gd_scene load_steps=2 format=3 uid="uid://hchi7bvdcooe"]
+
+[ext_resource type="Script" uid="uid://cv4vwqvx13fkj" path="res://scripts/hud.gd" id="1_hud"]
+
+[node name="HUD" type="VBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+theme_override_constants/separation = 16
+script = ExtResource("1_hud")
+
+[node name="PointsPanel" type="PanelContainer" parent="."]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="PointsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Label" type="Label" parent="PointsPanel/VBox"]
+layout_mode = 2
+text = "POINTS"
+horizontal_alignment = 1
+
+[node name="Value" type="Label" parent="PointsPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "0"
+horizontal_alignment = 1
+
+[node name="Rate" type="Label" parent="PointsPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.8, 0.6, 1)
+text = "+0/s"
+horizontal_alignment = 1
+
+[node name="EventLogPanel" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBox" type="VBoxContainer" parent="EventLogPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="EventLogPanel/VBox"]
+layout_mode = 2
+text = "EVENT LOG"
+horizontal_alignment = 1
+
+[node name="EventLog" type="RichTextLabel" parent="EventLogPanel/VBox"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true

@@ -1,0 +1,116 @@
+[gd_scene load_steps=8 format=3 uid="uid://cqivk7eqsqfwv"]
+
+[ext_resource type="Script" uid="uid://ca6lmpkdfo38s" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/grid.tscn" id="2_grid"]
+[ext_resource type="PackedScene" uid="uid://hchi7bvdcooe" path="res://scenes/hud.tscn" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/deck_pile.tscn" id="4_deck"]
+[ext_resource type="PackedScene" path="res://scenes/discard_pile.tscn" id="5_discard"]
+[ext_resource type="PackedScene" path="res://scenes/milestone_panel.tscn" id="6_milestone"]
+[ext_resource type="PackedScene" path="res://scenes/upgrades_panel.tscn" id="7_upgrades"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.11, 0.14, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="MainHBox" type="HBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LeftPanel" type="PanelContainer" parent="MarginContainer/MainHBox"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+
+[node name="HUD" parent="MarginContainer/MainHBox/LeftPanel" instance=ExtResource("3_hud")]
+layout_mode = 2
+
+[node name="CenterPanel" type="VBoxContainer" parent="MarginContainer/MainHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="MarginContainer/MainHBox/CenterPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "CARD COMBINER"
+horizontal_alignment = 1
+
+[node name="Instructions" type="Label" parent="MarginContainer/MainHBox/CenterPanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
+text = "Click DECK to draw • Drag cards to merge or place in hand • Drop on DISCARD to return"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer/MainHBox/CenterPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="DeckArea" type="HBoxContainer" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_constants/separation = 24
+
+[node name="DeckPile" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("4_deck")]
+layout_mode = 2
+
+[node name="DiscardPile" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("5_discard")]
+layout_mode = 2
+
+[node name="GridLabel" type="Label" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.6, 1)
+text = "HAND"
+horizontal_alignment = 1
+
+[node name="Grid" parent="MarginContainer/MainHBox/CenterPanel/VBox" instance=ExtResource("2_grid")]
+layout_mode = 2
+
+[node name="BoosterButton" type="Button" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
+visible = false
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "BUY BOOSTER PACK - 100 pts"
+
+[node name="RightPanel" type="VBoxContainer" parent="MarginContainer/MainHBox"]
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="UpgradesPanel" parent="MarginContainer/MainHBox/RightPanel" instance=ExtResource("7_upgrades")]
+layout_mode = 2
+
+[node name="MilestonePanelContainer" type="PanelContainer" parent="MarginContainer/MainHBox/RightPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MilestonePanel" parent="MarginContainer/MainHBox/RightPanel/MilestonePanelContainer" instance=ExtResource("6_milestone")]
+layout_mode = 2

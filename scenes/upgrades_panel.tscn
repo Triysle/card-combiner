@@ -1,0 +1,33 @@
+[gd_scene load_steps=2 format=3 uid="uid://upgrades_panel"]
+
+[ext_resource type="Script" path="res://scripts/upgrades_panel.gd" id="1_up"]
+
+[node name="UpgradesPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(280, 0)
+script = ExtResource("1_up")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HeaderButton" type="Button" parent="VBox"]
+layout_mode = 2
+text = "▼ UPGRADES"
+
+[node name="Content" type="VBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="CapLabel" type="Label" parent="VBox/Content"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.6, 1)
+theme_override_font_sizes/font_size = 11
+text = "Level cap: 10"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBox/Content"]
+layout_mode = 2
+
+[node name="UpgradesContainer" type="VBoxContainer" parent="VBox/Content"]
+layout_mode = 2
+theme_override_constants/separation = 2
