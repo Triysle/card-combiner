@@ -159,7 +159,8 @@ func _on_reset_confirmed() -> void:
 	var dir = DirAccess.open("user://")
 	if dir:
 		dir.remove("card_combiner_save.cfg")
-	# Reload the scene to start fresh
+	# Reset GameState to defaults and reload
+	GameState.reset_to_defaults()
 	get_tree().reload_current_scene()
 
 func _on_merge_attempted(source_index: int, target_index: int) -> void:

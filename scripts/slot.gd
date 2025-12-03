@@ -5,7 +5,6 @@ extends Panel
 
 signal merge_attempted(source_slot: Slot, target_slot: Slot)
 signal move_attempted(source_slot: Slot, target_slot: Slot)
-signal discard_requested(slot: Slot)
 signal hover_started(slot: Slot)
 
 var slot_index: int = -1

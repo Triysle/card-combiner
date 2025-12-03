@@ -86,12 +86,12 @@ func _create_upgrade_button(upgrade_id: String) -> Control:
 func _update_buttons(_value: int = 0) -> void:
 	for upgrade_id in upgrade_buttons:
 		var button: Button = upgrade_buttons[upgrade_id]
-		var level = GameState._get_upgrade_level(upgrade_id)
+		var _level = GameState._get_upgrade_level(upgrade_id)
 		var cost = GameState.get_upgrade_cost(upgrade_id)
 		var current_value = GameState.get_upgrade_value_display(upgrade_id)
 		var at_cap = GameState.is_upgrade_at_cap(upgrade_id)
 		
-		var name = GameState._get_upgrade_name(upgrade_id)
+		var upgrade_name = GameState._get_upgrade_name(upgrade_id)
 		
 		if at_cap:
 			button.text = "%s: %s (MAX)" % [name, current_value]

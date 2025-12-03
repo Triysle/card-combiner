@@ -703,7 +703,7 @@ func _apply_upgrade_cap() -> void:
 	log_event("Upgrade cap increased to %d levels!" % upgrade_cap)
 	upgrades_changed.emit()
 
-func _apply_booster_tier_upgrade(tier: int) -> void:
+func _apply_booster_tier_upgrade(_tier: int) -> void:
 	current_tier += 1
 	
 	# Unlock deck viewer and sell after T2
@@ -836,3 +836,29 @@ func load_game() -> void:
 		hand.append({})
 	
 	log_event("Game loaded (v%s)" % VERSION)
+
+func reset_to_defaults() -> void:
+	points = 0
+	deck.clear()
+	for i in range(10):
+		deck.append({tier = 1, rank = 1})
+	deck.shuffle()
+	discard_pile.clear()
+	hand.clear()
+	for i in range(STARTING_HAND_SIZE):
+		hand.append({})
+	current_tier = 1
+	hand_size = STARTING_HAND_SIZE
+	current_milestone_index = 0
+	milestone_slots = [{}, {}, {}]
+	has_merged = false
+	has_bought_pack = false
+	deck_viewer_unlocked = false
+	sell_unlocked = false
+	upgrade_point_gen_level = 0
+	upgrade_pack_cost_level = 0
+	upgrade_draw_speed_level = 0
+	upgrade_tick_speed_level = 0
+	upgrade_deck_value_level = 0
+	upgrade_cap = 10
+	upgrades_unlocked.clear()

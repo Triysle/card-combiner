@@ -118,7 +118,7 @@ func _on_card_clicked(source: String, index: int, card: Dictionary) -> void:
 		GameState.log_event("Can't sell from discard - draw it first")
 		return
 	
-	var sell_value = GameState.get_sell_value(card)
+	var _sell_value = GameState.get_sell_value(card)
 	var sold = GameState.sell_card_from_deck(index)
 	if sold > 0:
 		_refresh_display()
