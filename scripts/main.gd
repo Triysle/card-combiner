@@ -18,6 +18,7 @@ var deck_viewer_button: Button
 var deck_viewer_popup: PopupPanel
 
 const DECK_VIEWER_SCENE = preload("res://scenes/deck_viewer.tscn")
+const PACK_OPENING_SCENE = preload("res://scenes/pack_opening.tscn")
 
 func _ready() -> void:
 	grid.merge_attempted.connect(_on_merge_attempted)
@@ -163,10 +164,38 @@ func _on_discard_requested(slot_index: int) -> void:
 		GameState.log_event("Discarded %s" % GameState.card_to_string(card))
 
 func _on_booster_pressed() -> void:
-	var cards = GameState.buy_booster_pack()
-	if not cards.is_empty():
-		_update_booster_button()
-		_update_panel_visibility()
+	if not GameState.can_afford_pack():
+		return
+	
+	# Deduct cost and generate cards (but don't add to deck yet)
+	var cost = GameState.get_pack_cost()
+	GameState.points -= cost
+	var cards = GameState._generate_pack(GameState.current_tier)
+	
+	if not GameState.has_bought_pack:
+		GameState.has_bought_pack = true
+	
+	_update_booster_button()
+	_update_panel_visibility()
+	
+	# Show pack opening popup
+	var popup = PACK_OPENING_SCENE.instantiate()
+	add_child(popup)
+	popup.closed.connect(_on_pack_opening_closed.bind(cards))
+	popup.open(cards, GameState.current_tier)
+
+func _on_pack_opening_closed(cards: Array[Dictionary]) -> void:
+	# Add cards to deck now
+	for card in cards:
+		GameState.deck.push_back(card)
+	GameState.deck.shuffle()
+	
+	var card_strings: Array[String] = []
+	for card in cards:
+		card_strings.append(GameState.card_to_string(card))
+	GameState.log_event("Added to deck: %s" % ", ".join(card_strings))
+	
+	GameState.deck_changed.emit()
 
 func _on_points_changed(_value: int) -> void:
 	_update_booster_button()
