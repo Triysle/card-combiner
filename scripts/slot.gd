@@ -188,7 +188,7 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 		_set_drop_state(DropState.NONE)
 		return false
 	
-	var source = data.get("source", "")
+	var _source = data.get("source", "")
 	var incoming_card = data.get("card", {})
 	
 	if incoming_card.is_empty():
@@ -234,12 +234,12 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 			# Merge
 			merge_attempted.emit(source_slot, self)
 		else:
-			# Swap hand slots
+			# Swap hand slots - GameState.swap_hand_slots emits hand_changed
+			# which triggers Grid._sync_from_game_state to update all slot visuals
 			GameState.swap_hand_slots(source_slot.slot_index, slot_index)
-			source_slot.set_card(card_data)
-			set_card(incoming_card)
-			play_land_animation()
-			source_slot.play_land_animation()
+			# Play animations after sync happens
+			call_deferred("play_land_animation")
+			source_slot.call_deferred("play_land_animation")
 			GameState.log_event("Swapped cards")
 	
 	# Handle drop from discard pile
