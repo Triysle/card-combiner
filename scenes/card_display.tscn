@@ -90,4 +90,4 @@ mouse_filter = 2
 [node name="Symbol" type="Label" parent="CardBackContent"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
-text = "◆"
+text = "[CC]"

@@ -162,10 +162,15 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 		_set_drop_state(DropState.NONE)
 		return false
 	
-	var _source = data.get("source", "")
+	var source = data.get("source", "")
 	var incoming_card = data.get("card", {})
 	
 	if incoming_card.is_empty():
+		_set_drop_state(DropState.NONE)
+		return false
+	
+	# Accept from hand, discard, or milestone
+	if source != "hand" and source != "discard" and source != "milestone":
 		_set_drop_state(DropState.NONE)
 		return false
 	
@@ -182,7 +187,10 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 		_set_drop_state(DropState.VALID_MERGE)
 		return true
 	else:
-		# Can swap instead of merge
+		# Can swap (except milestone which requires specific cards)
+		if source == "milestone":
+			_set_drop_state(DropState.INVALID)
+			return true
 		_set_drop_state(DropState.VALID_SWAP)
 		return true
 
@@ -240,6 +248,32 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 			GameState.add_to_discard(old_hand_card)
 			play_land_animation()
 			GameState.log_event("Swapped %s with discard" % CardFactory.card_to_string(incoming_card))
+	
+	# Handle drop from milestone slot
+	elif source == "milestone":
+		var milestone_slot = data.get("slot")
+		if card_data.is_empty():
+			# Place card from milestone into hand
+			if milestone_slot:
+				milestone_slot.clear_card()
+				GameState.clear_milestone_slot(milestone_slot.slot_index)
+			set_card(incoming_card)
+			GameState.set_hand_slot(slot_index, incoming_card)
+			play_land_animation()
+			GameState.log_event("Moved %s from milestone to hand" % CardFactory.card_to_string(incoming_card))
+		elif GameState.can_merge(incoming_card, card_data):
+			# Merge milestone card with hand card
+			if milestone_slot:
+				milestone_slot.clear_card()
+				GameState.clear_milestone_slot(milestone_slot.slot_index)
+			var result = GameState.merge_cards(incoming_card, card_data)
+			set_card(result)
+			GameState.set_hand_slot(slot_index, result)
+			play_merge_animation()
+		else:
+			# Swap: hand card goes to milestone (if valid), milestone card to hand
+			# For simplicity, just reject swap since milestone requires specific cards
+			GameState.log_event("Cannot swap - milestone requires specific card")
 
 func _log_merge_failure(card1: Dictionary, card2: Dictionary) -> void:
 	var result = GameState.validate_merge(card1, card2)

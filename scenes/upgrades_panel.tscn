@@ -1,9 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://upgrades_panel"]
+[gd_scene load_steps=2 format=3 uid="uid://crrsoc4g23no7"]
 
-[ext_resource type="Script" path="res://scripts/upgrades_panel.gd" id="1_up"]
+[ext_resource type="Script" uid="uid://dfcw1y2jc87vk" path="res://scripts/upgrades_panel.gd" id="1_up"]
 
 [node name="UpgradesPanel" type="PanelContainer"]
-custom_minimum_size = Vector2(280, 0)
 script = ExtResource("1_up")
 
 [node name="VBox" type="VBoxContainer" parent="."]
@@ -12,7 +11,7 @@ theme_override_constants/separation = 4
 
 [node name="HeaderButton" type="Button" parent="VBox"]
 layout_mode = 2
-text = "▼ UPGRADES"
+text = "[-] UPGRADES"
 
 [node name="Content" type="VBoxContainer" parent="VBox"]
 layout_mode = 2

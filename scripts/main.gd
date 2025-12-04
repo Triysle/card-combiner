@@ -23,6 +23,13 @@ var reset_confirm_dialog: ConfirmationDialog
 
 const DECK_VIEWER_SCENE = preload("res://scenes/deck_viewer.tscn")
 const PACK_OPENING_SCENE = preload("res://scenes/pack_opening.tscn")
+const CREDITS_OVERLAY_SCENE = preload("res://scenes/credits_overlay.tscn")
+
+# Debug panel
+var debug_panel: PanelContainer
+var debug_visible: bool = false
+var debug_tick_button: Button
+
 
 func _ready() -> void:
 	grid.merge_attempted.connect(_on_merge_attempted)
@@ -33,6 +40,7 @@ func _ready() -> void:
 	
 	_setup_settings_ui()
 	_setup_deck_viewer()
+	_setup_debug_panel()
 	_update_booster_button()
 	_update_panel_visibility()
 	
@@ -118,6 +126,11 @@ func _setup_settings_ui() -> void:
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	version_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	popup_vbox.add_child(version_label)
+	
+	var credits_button = Button.new()
+	credits_button.text = "Credits"
+	credits_button.pressed.connect(_on_credits_pressed)
+	popup_vbox.add_child(credits_button)
 	
 	add_child(settings_popup)
 	
@@ -223,3 +236,111 @@ func _update_settings_visibility() -> void:
 	_update_panel_visibility()
 	if auto_draw_toggle:
 		auto_draw_toggle.visible = GameState.auto_draw_unlocked
+
+func _on_credits_pressed() -> void:
+	settings_popup.hide()
+	var credits = CREDITS_OVERLAY_SCENE.instantiate()
+	add_child(credits)
+
+# ===== DEBUG PANEL =====
+
+func _setup_debug_panel() -> void:
+	debug_panel = PanelContainer.new()
+	debug_panel.visible = false
+	
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.2, 0.15, 0.15, 1.0)
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = Color(0.6, 0.3, 0.3, 1.0)
+	style.corner_radius_top_left = 4
+	style.corner_radius_top_right = 4
+	style.corner_radius_bottom_right = 4
+	style.corner_radius_bottom_left = 4
+	debug_panel.add_theme_stylebox_override("panel", style)
+	
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 8)
+	margin.add_theme_constant_override("margin_right", 8)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	debug_panel.add_child(margin)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 4)
+	margin.add_child(vbox)
+	
+	var header_hbox = HBoxContainer.new()
+	vbox.add_child(header_hbox)
+	
+	var title = Label.new()
+	title.text = "DEBUG"
+	title.add_theme_color_override("font_color", Color(1.0, 0.5, 0.5))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_hbox.add_child(title)
+	
+	var close_btn = Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(24, 24)
+	close_btn.pressed.connect(_toggle_debug_panel)
+	header_hbox.add_child(close_btn)
+	
+	var sep = HSeparator.new()
+	vbox.add_child(sep)
+	
+	var points_btn = Button.new()
+	points_btn.text = "Grant 1M Points"
+	points_btn.pressed.connect(_debug_grant_points)
+	vbox.add_child(points_btn)
+	
+	debug_tick_button = Button.new()
+	debug_tick_button.text = "10x Tick Rate: OFF"
+	debug_tick_button.pressed.connect(_debug_toggle_tick_rate)
+	vbox.add_child(debug_tick_button)
+	
+	var milestone_btn = Button.new()
+	milestone_btn.text = "Complete Milestone"
+	milestone_btn.pressed.connect(_debug_complete_milestone)
+	vbox.add_child(milestone_btn)
+	
+	var hud = $MarginContainer/MainHBox/LeftPanel/HUD
+	hud.add_child(debug_panel)
+
+func _toggle_debug_panel() -> void:
+	debug_visible = not debug_visible
+	debug_panel.visible = debug_visible
+
+func _debug_grant_points() -> void:
+	GameState.points += 1000000
+	GameState.log_event("[DEBUG] Granted 1,000,000 points")
+
+func _debug_toggle_tick_rate() -> void:
+	GameState.debug_tick_multiplier = 1.0 if GameState.debug_tick_multiplier > 1.0 else 10.0
+	var state = "ON" if GameState.debug_tick_multiplier > 1.0 else "OFF"
+	debug_tick_button.text = "10x Tick Rate: %s" % state
+	GameState.log_event("[DEBUG] 10x tick rate: %s" % state)
+
+func _debug_complete_milestone() -> void:
+	var milestone = GameState.get_current_milestone()
+	if milestone.is_empty():
+		GameState.log_event("[DEBUG] No milestone to complete")
+		return
+	
+	# Fill milestone slots with the actual required cards
+	for i in range(milestone.required_cards.size()):
+		GameState.milestone_slots[i] = milestone.required_cards[i].duplicate()
+	
+	# Complete it
+	if GameState.complete_milestone():
+		GameState.log_event("[DEBUG] Milestone completed")
+	else:
+		GameState.log_event("[DEBUG] Failed to complete milestone")
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Ctrl+` to toggle debug panel
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_QUOTELEFT and event.ctrl_pressed:
+			_toggle_debug_panel()
+			get_viewport().set_input_as_handled()

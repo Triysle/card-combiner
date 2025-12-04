@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://pack_opening"]
+[gd_scene load_steps=2 format=3 uid="uid://84cb0i5ynftw"]
 
-[ext_resource type="Script" path="res://scripts/pack_opening.gd" id="1_po"]
+[ext_resource type="Script" uid="uid://c2oj537hep2sw" path="res://scripts/pack_opening.gd" id="1_po"]
 
 [node name="PackOpening" type="CanvasLayer"]
 layer = 10
@@ -15,7 +15,7 @@ grow_vertical = 2
 color = Color(0, 0, 0, 0)
 
 [node name="CenterContainer" type="CenterContainer" parent="Overlay"]
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2

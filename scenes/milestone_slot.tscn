@@ -1,9 +1,17 @@
-[gd_scene load_steps=2 format=3 uid="uid://milestone_slot"]
+[gd_scene load_steps=3 format=3 uid="uid://milestone_slot"]
 
 [ext_resource type="Script" path="res://scripts/milestone_slot.gd" id="1_ms"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ms"]
+bg_color = Color(0.22, 0.24, 0.28, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="MilestoneSlot" type="Panel"]
 custom_minimum_size = Vector2(70, 90)
+theme_override_styles/panel = SubResource("StyleBoxFlat_ms")
 script = ExtResource("1_ms")
 
 [node name="VBox" type="VBoxContainer" parent="."]

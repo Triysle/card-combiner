@@ -55,7 +55,7 @@ enum VisualMode { PROCEDURAL, TEXTURE, SHADER, HYBRID }
 @export_group("Card Back")
 @export var card_back_texture: Texture2D
 @export var card_back_color: Color = Color(0.2, 0.25, 0.35, 1.0)
-@export var card_back_symbol: String = "◆"
+@export var card_back_symbol: String = "[CC]"
 @export var card_back_symbol_color: Color = Color(0.35, 0.4, 0.5, 1.0)
 
 # === SHADERS ===

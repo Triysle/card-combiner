@@ -82,9 +82,12 @@ var deck_scoring_percent: float = 0.0
 # Auto-draw: unlocked at T3
 var auto_draw_unlocked: bool = false
 var auto_draw_enabled: bool = false
+# Hand bonus multiplier: T9=x2, T10=x20
+var hand_bonus_multiplier: float = 1.0
 
 # ===== INTERNAL =====
 var _tick_timer: float = 0.0
+var debug_tick_multiplier: float = 1.0
 
 func _ready() -> void:
 	_initialize_game()
@@ -132,9 +135,10 @@ func _on_tick() -> void:
 func get_draw_cooldown() -> float:
 	return maxf(CardFactory.config.min_draw_cooldown, BASE_DRAW_COOLDOWN / draw_cooldown_divisor)
 
-## Tick interval: base / multiplier (tier power)
+## Tick interval: base / multiplier (tier power) / debug multiplier
 func get_tick_interval() -> float:
-	return maxf(CardFactory.config.min_tick_interval, BASE_TICK_INTERVAL / tick_rate_multiplier)
+	var total_multiplier = tick_rate_multiplier * debug_tick_multiplier
+	return maxf(CardFactory.config.min_tick_interval, BASE_TICK_INTERVAL / total_multiplier)
 
 ## Points multiplier from Points Mod upgrade
 func get_points_mod_multiplier() -> float:
@@ -254,6 +258,9 @@ func calculate_points_per_tick() -> int:
 	
 	# Apply points mod multiplier (upgrade)
 	var multiplied = int(base_total * get_points_mod_multiplier())
+	
+	# Apply hand bonus multiplier (tier 9-10 milestone reward)
+	multiplied = int(multiplied * hand_bonus_multiplier)
 	
 	# Apply tick rate multiplier (tier power) - more ticks = more points
 	multiplied = int(multiplied * tick_rate_multiplier)
@@ -525,10 +532,12 @@ func _roll_rank(min_rank: int, max_rank: int = 9) -> int:
 
 # ===== MILESTONES =====
 # 4 milestones per tier × 10 tiers = 40 total
-# Milestone 1: Hand Size (R1 + R2 + R3)
+# Milestone 1: Hand Size (R1 + R2 + R3) - +1 slot T1-T8, Hand Bonus x2 T9, Hand Bonus x10 T10
 # Milestone 2: Tier Power (R4 + R5 + R6) - unique per tier
 # Milestone 3: Upgrade Limit (R7 + R8 + R9)
 # Milestone 4: Booster Tier (R10 + R10 + R10)
+
+const MAX_HAND_SIZE: int = 10
 
 func get_current_milestone() -> Dictionary:
 	if current_milestone_index >= 40:
@@ -550,9 +559,11 @@ func get_current_milestone() -> Dictionary:
 				{tier = tier, rank = 2},
 				{tier = tier, rank = 3}
 			]
-			# T9 and T10 give +5 instead of +1
-			if tier >= 9:
-				reward_text = "+5 hand slots"
+			# T1-T8: +1 hand slot, T9: Hand Bonus x2, T10: Hand Bonus x10
+			if tier == 10:
+				reward_text = "Hand Bonus x10"
+			elif tier == 9:
+				reward_text = "Hand Bonus x2"
 			else:
 				reward_text = "+1 hand slot"
 		
@@ -635,6 +646,12 @@ func slot_card_in_milestone(card: Dictionary, slot_index: int) -> bool:
 	milestone_changed.emit()
 	return true
 
+func clear_milestone_slot(slot_index: int) -> void:
+	if slot_index < 0 or slot_index >= milestone_slots.size():
+		return
+	milestone_slots[slot_index] = {}
+	milestone_changed.emit()
+
 func remove_card_from_milestone(slot_index: int) -> Dictionary:
 	if slot_index < 0 or slot_index >= milestone_slots.size():
 		return {}
@@ -687,10 +704,21 @@ func complete_milestone() -> bool:
 	return true
 
 func _apply_hand_size_reward(tier: int) -> void:
-	var old_size = hand_size
-	var bonus = 5 if tier >= 9 else 1
-	expand_hand(hand_size + bonus)
-	log_event("Hand size: %d -> %d" % [old_size, hand_size])
+	if hand_size < MAX_HAND_SIZE:
+		# Tiers 1-8: +1 hand slot each (max 10)
+		var old_size = hand_size
+		expand_hand(hand_size + 1)
+		log_event("Hand size: %d -> %d" % [old_size, hand_size])
+	elif tier == 9:
+		# Tier 9: Hand Bonus x2
+		hand_bonus_multiplier = 2.0
+		log_event("Hand Bonus x2!")
+		upgrades_changed.emit()
+	elif tier == 10:
+		# Tier 10: Hand Bonus x10 (stacks: 2 * 10 = 20)
+		hand_bonus_multiplier = 20.0
+		log_event("Hand Bonus x10! (x20 total)")
+		upgrades_changed.emit()
 
 func _apply_tier_power_reward(tier: int) -> void:
 	match tier:
@@ -803,6 +831,7 @@ func save_game() -> void:
 	config.set_value("tier_power", "deck_scoring_percent", deck_scoring_percent)
 	config.set_value("tier_power", "auto_draw_unlocked", auto_draw_unlocked)
 	config.set_value("tier_power", "auto_draw_enabled", auto_draw_enabled)
+	config.set_value("tier_power", "hand_bonus_multiplier", hand_bonus_multiplier)
 	
 	var err = config.save(SAVE_PATH)
 	if err == OK:
@@ -860,6 +889,7 @@ func load_game() -> void:
 	deck_scoring_percent = config.get_value("tier_power", "deck_scoring_percent", 0.0)
 	auto_draw_unlocked = config.get_value("tier_power", "auto_draw_unlocked", false)
 	auto_draw_enabled = config.get_value("tier_power", "auto_draw_enabled", false)
+	hand_bonus_multiplier = config.get_value("tier_power", "hand_bonus_multiplier", 1.0)
 	
 	# Ensure hand is correct size
 	while hand.size() < hand_size:
@@ -904,3 +934,4 @@ func reset_to_defaults() -> void:
 	deck_scoring_percent = 0.0
 	auto_draw_unlocked = false
 	auto_draw_enabled = false
+	hand_bonus_multiplier = 1.0

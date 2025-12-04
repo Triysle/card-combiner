@@ -76,8 +76,8 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 		drop_indicator.visible = false
 		return false  # Can't drop discard on itself
 	
-	# Can drop hand cards here to discard them
-	if source == "hand":
+	# Can drop hand cards or milestone cards here to discard them
+	if source == "hand" or source == "milestone":
 		drop_indicator.visible = true
 		drop_indicator.color = CardFactory.visuals.drop_discard_color
 		return true
@@ -101,3 +101,9 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 		GameState.add_to_discard(card)
 		source_slot.clear_card()
 		GameState.log_event("Discarded %s" % CardFactory.card_to_string(card))
+	elif source == "milestone" and source_slot is MilestoneSlot:
+		# Discard the card from milestone
+		GameState.clear_milestone_slot(source_slot.slot_index)
+		GameState.add_to_discard(card)
+		source_slot.clear_card()
+		GameState.log_event("Discarded %s from milestone" % CardFactory.card_to_string(card))

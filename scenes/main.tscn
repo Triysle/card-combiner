@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://bgc761tvvpkuq" path="res://scenes/deck_pile.tscn" id="4_deck"]
 [ext_resource type="PackedScene" path="res://scenes/discard_pile.tscn" id="5_discard"]
 [ext_resource type="PackedScene" path="res://scenes/milestone_panel.tscn" id="6_milestone"]
-[ext_resource type="PackedScene" path="res://scenes/upgrades_panel.tscn" id="7_upgrades"]
+[ext_resource type="PackedScene" uid="uid://crrsoc4g23no7" path="res://scenes/upgrades_panel.tscn" id="7_upgrades"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -43,7 +43,7 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="LeftPanel" type="PanelContainer" parent="MarginContainer/MainHBox"]
-custom_minimum_size = Vector2(220, 0)
+custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
 
 [node name="HUD" parent="MarginContainer/MainHBox/LeftPanel" instance=ExtResource("3_hud")]
@@ -52,7 +52,7 @@ layout_mode = 2
 [node name="CenterPanel" type="VBoxContainer" parent="MarginContainer/MainHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 16
+theme_override_constants/separation = 6
 
 [node name="Title" type="Label" parent="MarginContainer/MainHBox/CenterPanel"]
 layout_mode = 2
@@ -101,9 +101,9 @@ size_flags_horizontal = 4
 text = "BUY BOOSTER PACK - 100 pts"
 
 [node name="RightPanel" type="VBoxContainer" parent="MarginContainer/MainHBox"]
-custom_minimum_size = Vector2(260, 0)
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 8
 
 [node name="UpgradesPanel" parent="MarginContainer/MainHBox/RightPanel" instance=ExtResource("7_upgrades")]
 layout_mode = 2

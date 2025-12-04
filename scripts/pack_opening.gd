@@ -13,9 +13,9 @@ signal closed
 
 # Animation timing
 const OVERLAY_FADE_TIME := 0.2
-const CARD_SLIDE_TIME := 0.4
+const CARD_SLIDE_TIME := 0.25
 const CARD_SLIDE_STAGGER := 0.08
-const PRE_FLIP_PAUSE := 0.3
+const PRE_FLIP_PAUSE := 0.0
 const FLIP_DURATION := 0.3
 const FLIP_DELAY := 0.35
 const FINAL_CARD_EXTRA_PAUSE := 0.3
@@ -63,6 +63,8 @@ func _create_card_displays() -> void:
 		var target_x = start_x + (i * (card_size.x + CARD_SPACING))
 		card_display.position = Vector2(target_x, 0)
 		card_display.modulate.a = 0.0  # Start invisible for slide-in
+		# Set pivot to center for flip animation
+		card_display.pivot_offset = card_size / 2.0
 		cards_container.add_child(card_display)
 		card_displays.append(card_display)
 
