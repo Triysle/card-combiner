@@ -1,7 +1,7 @@
 extends PanelContainer
 
 ## Upgrades Panel - collapsible panel showing available upgrades
-## All 4 upgrades available from start, caps increase via milestones
+## All 4 upgrades available from game start, caps increase via milestones
 
 @onready var header_button: Button = $VBox/HeaderButton
 @onready var content: VBoxContainer = $VBox/Content
@@ -10,8 +10,6 @@ extends PanelContainer
 
 var is_expanded: bool = true
 var upgrade_buttons: Dictionary = {}  # upgrade_id -> Button
-
-const UPGRADE_ORDER: Array[String] = ["points_mod", "pack_discount", "critical_merge", "lucky_pack"]
 
 const UPGRADE_DESCRIPTIONS: Dictionary = {
 	"points_mod": "Multiplies all point generation",
@@ -39,8 +37,8 @@ func _rebuild_upgrades() -> void:
 		child.queue_free()
 	upgrade_buttons.clear()
 	
-	# Create buttons for all upgrades (always available now)
-	for upgrade_id in UPGRADE_ORDER:
+	# Create buttons for all upgrades (always available)
+	for upgrade_id in GameState.UPGRADE_ORDER:
 		var btn_container = _create_upgrade_button(upgrade_id)
 		upgrades_container.add_child(btn_container)
 	
@@ -90,7 +88,7 @@ func _update_buttons(_value: int = 0) -> void:
 			button.disabled = true
 		else:
 			var next_value = GameState.get_upgrade_next_value_display(upgrade_id)
-			button.text = "%s: %s → %s (%d pts)" % [display_name, current_value, next_value, cost]
+			button.text = "%s: %s -> %s (%d pts)" % [display_name, current_value, next_value, cost]
 			button.disabled = not GameState.can_purchase_upgrade(upgrade_id)
 	
 	# Update cap label

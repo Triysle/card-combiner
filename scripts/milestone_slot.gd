@@ -1,3 +1,4 @@
+# scripts/milestone_slot.gd
 class_name MilestoneSlot
 extends Panel
 
@@ -19,8 +20,6 @@ var _drop_state: DropState = DropState.NONE
 @onready var card_tier_label: Label = $VBox/CardDisplay/VBox/TierLabel
 @onready var card_rank_label: Label = $VBox/CardDisplay/VBox/RankLabel
 @onready var drop_indicator: ColorRect = $DropIndicator
-
-const TIER_NUMERALS: Array[String] = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 func _ready() -> void:
 	drop_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -51,7 +50,7 @@ func _update_display() -> void:
 	
 	# Show requirement
 	if not required_card.is_empty():
-		requirement_label.text = "T%s R%d" % [TIER_NUMERALS[required_card.tier], required_card.rank]
+		requirement_label.text = "T%s R%d" % [CardFactory.get_tier_numeral(required_card.tier), required_card.rank]
 	else:
 		requirement_label.text = "???"
 	
@@ -64,22 +63,21 @@ func _update_display() -> void:
 	else:
 		card_display.visible = true
 		status_label.visible = false
-		card_tier_label.text = "T%s" % TIER_NUMERALS[current_card.tier]
+		card_tier_label.text = "T%s" % CardFactory.get_tier_numeral(current_card.tier)
 		card_rank_label.text = "R%d" % current_card.rank
 		_update_card_color()
 	
 	# Drop indicator
 	drop_indicator.visible = _drop_state != DropState.NONE
 	if _drop_state == DropState.VALID:
-		drop_indicator.color = Color(0.2, 0.6, 0.2, 0.5)
+		drop_indicator.color = CardFactory.visuals.drop_valid_move_color
 	elif _drop_state == DropState.INVALID:
-		drop_indicator.color = Color(0.6, 0.2, 0.2, 0.5)
+		drop_indicator.color = CardFactory.visuals.drop_invalid_color
 
 func _update_card_color() -> void:
-	# Simple color based on rank
+	var tier = current_card.get("tier", 1)
 	var rank = current_card.get("rank", 1)
-	var hue = (rank - 1) / 10.0 * 0.8  # Range from red to violet
-	card_display.self_modulate = Color.from_hsv(hue, 0.6, 0.8)
+	card_display.self_modulate = CardFactory.get_card_color(tier, rank)
 
 func _set_drop_state(state: DropState) -> void:
 	if _drop_state != state:
@@ -93,7 +91,7 @@ func _get_drag_data(_pos: Vector2) -> Variant:
 		return null
 	
 	# Allow dragging card back out of milestone slot
-	var preview = _create_drag_preview()
+	var preview = CardFactory.create_drag_preview(current_card)
 	set_drag_preview(preview)
 	
 	return {source = "milestone", slot = self, card = current_card}
@@ -138,7 +136,7 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 	# Check requirement
 	if not _card_matches_requirement(incoming_card):
 		GameState.log_event("Card doesn't match requirement (need T%s R%d)" % [
-			TIER_NUMERALS[required_card.tier], required_card.rank])
+			CardFactory.get_tier_numeral(required_card.tier), required_card.rank])
 		return
 	
 	# Remove card from source
@@ -164,37 +162,3 @@ func _notification(what: int) -> void:
 		# If we were the drag source and card was dropped elsewhere
 		if current_card.is_empty():
 			card_removed.emit(self)
-
-func _create_drag_preview() -> Control:
-	var preview = Panel.new()
-	preview.custom_minimum_size = Vector2(60, 70)
-	
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.3, 0.3, 0.35)
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.border_color = Color(0.6, 0.6, 0.65)
-	style.corner_radius_top_left = 4
-	style.corner_radius_top_right = 4
-	style.corner_radius_bottom_right = 4
-	style.corner_radius_bottom_left = 4
-	preview.add_theme_stylebox_override("panel", style)
-	
-	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	preview.add_child(vbox)
-	
-	var tier_lbl = Label.new()
-	tier_lbl.text = "T%s" % TIER_NUMERALS[current_card.tier]
-	tier_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(tier_lbl)
-	
-	var rank_lbl = Label.new()
-	rank_lbl.text = "R%d" % current_card.rank
-	rank_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(rank_lbl)
-	
-	return preview

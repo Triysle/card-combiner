@@ -1,3 +1,4 @@
+# scripts/slot.gd
 class_name Slot
 extends Panel
 
@@ -28,22 +29,6 @@ var _anim_tween: Tween = null
 @onready var tier_label: Label = $CardContainer/VBox/TierLabel
 @onready var output_label: Label = $CardContainer/VBox/OutputLabel
 @onready var card_background: ColorRect = $CardContainer/CardBackground
-
-# Rank colors (inverted chromatic: 1=violet, 10=white)
-const RANK_COLORS: Array[Color] = [
-	Color(0.56, 0.0, 1.0),    # 1 - Violet
-	Color(0.29, 0.0, 0.51),   # 2 - Indigo
-	Color(0.0, 0.0, 1.0),     # 3 - Blue
-	Color(0.0, 0.5, 0.0),     # 4 - Green
-	Color(1.0, 1.0, 0.0),     # 5 - Yellow
-	Color(1.0, 0.65, 0.0),    # 6 - Orange
-	Color(1.0, 0.0, 0.0),     # 7 - Red
-	Color(0.1, 0.1, 0.1),     # 8 - Black
-	Color(0.5, 0.5, 0.5),     # 9 - Grey
-	Color(1.0, 1.0, 1.0),     # 10 - White
-]
-
-const TIER_NUMERALS: Array[String] = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 func _ready() -> void:
 	origin_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -99,33 +84,26 @@ func _update_card_display() -> void:
 	var tier = card_data.get("tier", 0)
 	
 	rank_label.text = "Rank %d" % rank
-	tier_label.text = "Tier %s" % TIER_NUMERALS[tier] if tier > 0 else ""
+	tier_label.text = "Tier %s" % CardFactory.get_tier_numeral(tier) if tier > 0 else ""
 	_update_output_display()
 	
-	# Set card color based on rank
-	var color_index = clampi(rank - 1, 0, RANK_COLORS.size() - 1)
-	var base_color = RANK_COLORS[color_index]
-	
-	# Modify saturation based on tier
-	var hsv_h = base_color.h
-	var hsv_s = base_color.s * (0.6 + 0.04 * tier)
-	var hsv_v = base_color.v * (0.7 + 0.03 * tier)
-	
-	card_background.color = Color.from_hsv(hsv_h, clampf(hsv_s, 0.0, 1.0), clampf(hsv_v, 0.3, 1.0))
+	# Set card color using CardFactory
+	card_background.color = CardFactory.get_card_color(tier, rank)
 
 func _update_output_display() -> void:
 	output_label.text = "+%d/s" % get_output()
 
 func _update_drop_indicator_style() -> void:
+	var visuals = CardFactory.visuals
 	match _drop_state:
 		DropState.VALID_MOVE:
-			drop_indicator.color = Color(0.2, 0.6, 0.2, 0.6)
+			drop_indicator.color = visuals.drop_valid_move_color
 		DropState.VALID_MERGE:
-			drop_indicator.color = Color(0.2, 0.4, 0.8, 0.6)
+			drop_indicator.color = visuals.drop_valid_merge_color
 		DropState.VALID_SWAP:
-			drop_indicator.color = Color(0.6, 0.5, 0.2, 0.6)  # Yellow/orange for swap
+			drop_indicator.color = visuals.drop_valid_swap_color
 		DropState.INVALID:
-			drop_indicator.color = Color(0.6, 0.2, 0.2, 0.6)
+			drop_indicator.color = visuals.drop_invalid_color
 
 func _set_drop_state(state: DropState) -> void:
 	if _drop_state != state:
@@ -169,12 +147,8 @@ func _get_drag_data(_pos: Vector2) -> Variant:
 	_is_drag_origin = true
 	_update_display()
 	
-	var preview = _create_drag_preview()
-	var offset_container = Control.new()
-	offset_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	offset_container.add_child(preview)
-	preview.position = -preview.custom_minimum_size / 2
-	set_drag_preview(offset_container)
+	var preview = CardFactory.create_drag_preview(card_data)
+	set_drag_preview(preview)
 	
 	return {source = "hand", slot = self, card = card_data}
 
@@ -265,7 +239,7 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 			GameState.set_hand_slot(slot_index, incoming_card)
 			GameState.add_to_discard(old_hand_card)
 			play_land_animation()
-			GameState.log_event("Swapped %s with discard" % GameState.card_to_string(incoming_card))
+			GameState.log_event("Swapped %s with discard" % CardFactory.card_to_string(incoming_card))
 
 func _log_merge_failure(card1: Dictionary, card2: Dictionary) -> void:
 	var result = GameState.validate_merge(card1, card2)
@@ -276,42 +250,3 @@ func _log_merge_failure(card1: Dictionary, card2: Dictionary) -> void:
 			GameState.log_event("Cannot merge: different ranks")
 		GameState.MergeResult.INVALID_MAX_RANK:
 			GameState.log_event("Cannot merge: max rank reached")
-
-func _create_drag_preview() -> Control:
-	var preview = Panel.new()
-	preview.custom_minimum_size = Vector2(90, 110)
-	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	
-	var style = StyleBoxFlat.new()
-	var rank = card_data.get("rank", 1)
-	var color_index = clampi(rank - 1, 0, RANK_COLORS.size() - 1)
-	style.bg_color = RANK_COLORS[color_index].darkened(0.2)
-	style.border_width_left = 2
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.border_color = Color(0.8, 0.8, 0.8, 1.0)
-	style.corner_radius_top_left = 6
-	style.corner_radius_top_right = 6
-	style.corner_radius_bottom_right = 6
-	style.corner_radius_bottom_left = 6
-	preview.add_theme_stylebox_override("panel", style)
-	
-	var vbox = VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	preview.add_child(vbox)
-	
-	var tier = card_data.get("tier", 1)
-	
-	var tier_lbl = Label.new()
-	tier_lbl.text = "Tier %s" % TIER_NUMERALS[tier]
-	tier_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(tier_lbl)
-	
-	var rank_lbl = Label.new()
-	rank_lbl.text = "Rank %d" % rank
-	rank_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(rank_lbl)
-	
-	return preview

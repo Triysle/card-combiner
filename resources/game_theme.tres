@@ -1,0 +1,6 @@
+[gd_resource type="Theme" load_steps=2 format=3 uid="uid://bm20tx2hyk32p"]
+
+[ext_resource type="FontFile" uid="uid://djllqv6omufhh" path="res://assets/fonts/RobotoSlab-VariableFont_wght.ttf" id="1_ntlge"]
+
+[resource]
+default_font = ExtResource("1_ntlge")

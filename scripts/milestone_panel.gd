@@ -1,3 +1,4 @@
+# scripts/milestone_panel.gd
 extends VBoxContainer
 
 ## Milestone Panel - displays current milestone and accepts card keys
@@ -9,7 +10,6 @@ extends VBoxContainer
 @onready var unlock_button: Button = $UnlockButton
 
 const MILESTONE_SLOT_SCENE = preload("res://scenes/milestone_slot.tscn")
-const TIER_NUMERALS: Array[String] = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 var milestone_slots: Array[MilestoneSlot] = []
 
@@ -52,7 +52,7 @@ func _update_display() -> void:
 	# Show milestone info
 	var type_name = _get_milestone_type_name(milestone.type)
 	title_label.text = type_name
-	tier_label.text = "Tier %s" % TIER_NUMERALS[milestone.tier]
+	tier_label.text = "Tier %s" % CardFactory.get_tier_numeral(milestone.tier)
 	reward_label.text = milestone.reward_text
 	
 	# Update slots with requirements
@@ -78,8 +78,8 @@ func _update_display() -> void:
 func _get_milestone_type_name(type: String) -> String:
 	match type:
 		"hand_size": return "HAND SIZE"
-		"new_upgrade": return "NEW UPGRADE"
-		"upgrade_cap": return "UPGRADE CAP"
+		"tier_power": return "TIER POWER"
+		"upgrade_limit": return "UPGRADE LIMIT"
 		"booster_tier": return "BOOSTER TIER"
 	return type.to_upper()
 

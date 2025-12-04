@@ -186,7 +186,7 @@ func _on_discard_requested(slot_index: int) -> void:
 	GameState.discard_from_hand(slot_index)
 
 func _on_booster_pressed() -> void:
-	if not GameState.can_buy_pack():
+	if not GameState.can_afford_pack():
 		return
 	
 	var cards = GameState.buy_pack()
@@ -211,9 +211,9 @@ func _update_booster_button() -> void:
 	
 	if booster_button.visible:
 		var cost = GameState.get_pack_cost()
-		var tier_num = GameState.TIER_NUMERALS[GameState.current_tier]
+		var tier_num = CardFactory.get_tier_numeral(GameState.current_tier)
 		booster_button.text = "BUY T%s BOOSTER PACK - %d pts" % [tier_num, cost]
-		booster_button.disabled = not GameState.can_buy_pack()
+		booster_button.disabled = not GameState.can_afford_pack()
 
 func _update_panel_visibility() -> void:
 	milestone_container.visible = GameState.has_bought_pack

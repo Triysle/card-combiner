@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="CardVisuals" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/card_visuals.gd" id="1_cv"]
+
+[resource]
+script = ExtResource("1_cv")
+tier_numerals = Array[String](["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"])
+card_size = Vector2(100, 120)
+card_preview_size = Vector2(90, 110)
+card_corner_radius = 6
+card_border_width = 2
+rank_colors = Array[Color]([Color(0.56, 0, 1, 1), Color(0.29, 0, 0.51, 1), Color(0, 0, 1, 1), Color(0, 0.5, 0, 1), Color(1, 1, 0, 1), Color(1, 0.65, 0, 1), Color(1, 0, 0, 1), Color(0.1, 0.1, 0.1, 1), Color(0.5, 0.5, 0.5, 1), Color(1, 1, 1, 1)])
+tier_saturation_base = 0.6
+tier_saturation_scale = 0.04
+tier_value_base = 0.7
+tier_value_scale = 0.03
+visual_mode = 0
+rank_backgrounds = Array[Texture2D]([])
+tier_frames = Array[Texture2D]([])
+numeral_background = null
+card_back_texture = null
+card_back_color = Color(0.2, 0.25, 0.35, 1)
+card_back_symbol = "◆"
+card_back_symbol_color = Color(0.35, 0.4, 0.5, 1)
+card_shader = null
+tier_effect_shaders = Array[Shader]([])
+game_background_texture = null
+game_background_color = Color(0.1, 0.11, 0.14, 1)
+drop_valid_move_color = Color(0.2, 0.6, 0.2, 0.6)
+drop_valid_merge_color = Color(0.2, 0.4, 0.8, 0.6)
+drop_valid_swap_color = Color(0.6, 0.5, 0.2, 0.6)
+drop_invalid_color = Color(0.6, 0.2, 0.2, 0.6)
+drop_discard_color = Color(0.6, 0.4, 0.2, 0.6)

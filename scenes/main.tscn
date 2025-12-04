@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://ca6lmpkdfo38s" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/grid.tscn" id="2_grid"]
 [ext_resource type="PackedScene" uid="uid://hchi7bvdcooe" path="res://scenes/hud.tscn" id="3_hud"]
-[ext_resource type="PackedScene" path="res://scenes/deck_pile.tscn" id="4_deck"]
+[ext_resource type="PackedScene" uid="uid://bgc761tvvpkuq" path="res://scenes/deck_pile.tscn" id="4_deck"]
 [ext_resource type="PackedScene" path="res://scenes/discard_pile.tscn" id="5_discard"]
 [ext_resource type="PackedScene" path="res://scenes/milestone_panel.tscn" id="6_milestone"]
 [ext_resource type="PackedScene" path="res://scenes/upgrades_panel.tscn" id="7_upgrades"]
@@ -63,7 +63,7 @@ horizontal_alignment = 1
 [node name="Instructions" type="Label" parent="MarginContainer/MainHBox/CenterPanel"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
-text = "Click DECK to draw • Drag cards to merge or place in hand • Drop on DISCARD to return"
+text = "Click DECK to draw • Drag cards to merge or place in hand"
 horizontal_alignment = 1
 autowrap_mode = 2
 
