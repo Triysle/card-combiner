@@ -1,6 +1,7 @@
 extends PanelContainer
 
 ## Upgrades Panel - collapsible panel showing available upgrades
+## All 4 upgrades available from start, caps increase via milestones
 
 @onready var header_button: Button = $VBox/HeaderButton
 @onready var content: VBoxContainer = $VBox/Content
@@ -10,14 +11,13 @@ extends PanelContainer
 var is_expanded: bool = true
 var upgrade_buttons: Dictionary = {}  # upgrade_id -> Button
 
-const UPGRADE_ORDER: Array[String] = ["point_gen", "pack_cost", "draw_speed", "tick_speed", "deck_value"]
+const UPGRADE_ORDER: Array[String] = ["points_mod", "pack_discount", "critical_merge", "lucky_pack"]
 
 const UPGRADE_DESCRIPTIONS: Dictionary = {
-	"point_gen": "Multiplies point generation",
-	"pack_cost": "Reduces booster pack cost",
-	"draw_speed": "Faster card drawing",
-	"tick_speed": "Faster point ticks",
-	"deck_value": "Bonus from deck value"
+	"points_mod": "Multiplies all point generation",
+	"pack_discount": "Reduces booster pack cost",
+	"critical_merge": "Chance for +2 rank on merge",
+	"lucky_pack": "Chance for R9 in final pack slot"
 }
 
 func _ready() -> void:
@@ -27,11 +27,6 @@ func _ready() -> void:
 	GameState.tick.connect(_update_buttons)
 	
 	_rebuild_upgrades()
-	_update_visibility()
-
-func _update_visibility() -> void:
-	# Only show if at least one upgrade is unlocked
-	visible = GameState.upgrades_unlocked.size() > 0
 
 func _on_header_pressed() -> void:
 	is_expanded = not is_expanded
@@ -44,16 +39,14 @@ func _rebuild_upgrades() -> void:
 		child.queue_free()
 	upgrade_buttons.clear()
 	
-	# Create buttons for unlocked upgrades
+	# Create buttons for all upgrades (always available now)
 	for upgrade_id in UPGRADE_ORDER:
-		if GameState.is_upgrade_unlocked(upgrade_id):
-			var btn_container = _create_upgrade_button(upgrade_id)
-			upgrades_container.add_child(btn_container)
+		var btn_container = _create_upgrade_button(upgrade_id)
+		upgrades_container.add_child(btn_container)
 	
 	# Update cap label
 	cap_label.text = "Level cap: %d" % GameState.upgrade_cap
 	
-	_update_visibility()
 	_update_buttons()
 
 func _create_upgrade_button(upgrade_id: String) -> Control:
@@ -99,6 +92,9 @@ func _update_buttons(_value: int = 0) -> void:
 			var next_value = GameState.get_upgrade_next_value_display(upgrade_id)
 			button.text = "%s: %s → %s (%d pts)" % [display_name, current_value, next_value, cost]
 			button.disabled = not GameState.can_purchase_upgrade(upgrade_id)
+	
+	# Update cap label
+	cap_label.text = "Level cap: %d" % GameState.upgrade_cap
 
 func _on_upgrade_pressed(upgrade_id: String) -> void:
 	if GameState.try_purchase_upgrade(upgrade_id):

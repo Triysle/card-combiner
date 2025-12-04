@@ -2,9 +2,9 @@ extends Control
 
 ## Main scene - orchestrates all game interactions
 
-@onready var grid: Grid = $MarginContainer/MainHBox/CenterPanel/VBox/Grid
-@onready var deck_pile: DeckPile = $MarginContainer/MainHBox/CenterPanel/VBox/DeckArea/DeckPile
-@onready var discard_pile: DiscardPile = $MarginContainer/MainHBox/CenterPanel/VBox/DeckArea/DiscardPile
+@onready var grid = $MarginContainer/MainHBox/CenterPanel/VBox/Grid
+@onready var deck_pile = $MarginContainer/MainHBox/CenterPanel/VBox/DeckArea/DeckPile
+@onready var discard_pile = $MarginContainer/MainHBox/CenterPanel/VBox/DeckArea/DiscardPile
 @onready var booster_button: Button = $MarginContainer/MainHBox/CenterPanel/VBox/BoosterButton
 @onready var milestone_container: PanelContainer = $MarginContainer/MainHBox/RightPanel/MilestonePanelContainer
 @onready var upgrades_panel: PanelContainer = $MarginContainer/MainHBox/RightPanel/UpgradesPanel
@@ -12,6 +12,7 @@ extends Control
 # Settings UI
 var settings_button: Button
 var settings_popup: PopupPanel
+var auto_draw_toggle: CheckButton
 
 # Deck viewer
 var deck_viewer_button: Button
@@ -38,7 +39,7 @@ func _ready() -> void:
 	GameState.points_changed.connect(_on_points_changed)
 	GameState.hand_changed.connect(_on_hand_changed)
 	GameState.milestone_changed.connect(_update_panel_visibility)
-	GameState.upgrades_changed.connect(_update_panel_visibility)
+	GameState.upgrades_changed.connect(_update_settings_visibility)
 	
 	GameState.log_event("Welcome to Card Combiner! (v%s)" % GameState.VERSION)
 	GameState.log_event("Click the DECK to draw your first card")
@@ -49,7 +50,6 @@ func _setup_settings_ui() -> void:
 	settings_button.pressed.connect(_on_settings_pressed)
 	settings_button.custom_minimum_size = Vector2(100, 32)
 	
-	# Add to right panel at the top (before upgrades panel)
 	var right_panel = $MarginContainer/MainHBox/RightPanel
 	right_panel.add_child(settings_button)
 	right_panel.move_child(settings_button, 0)
@@ -88,6 +88,14 @@ func _setup_settings_ui() -> void:
 	var sep1 = HSeparator.new()
 	popup_vbox.add_child(sep1)
 	
+	# Auto-draw toggle
+	auto_draw_toggle = CheckButton.new()
+	auto_draw_toggle.text = "Auto-Draw"
+	auto_draw_toggle.button_pressed = GameState.auto_draw_enabled
+	auto_draw_toggle.toggled.connect(_on_auto_draw_toggled)
+	auto_draw_toggle.visible = GameState.auto_draw_unlocked
+	popup_vbox.add_child(auto_draw_toggle)
+	
 	var save_button = Button.new()
 	save_button.text = "Save Game"
 	save_button.pressed.connect(_on_save_pressed)
@@ -113,7 +121,6 @@ func _setup_settings_ui() -> void:
 	
 	add_child(settings_popup)
 	
-	# Create reset confirmation dialog
 	reset_confirm_dialog = ConfirmationDialog.new()
 	reset_confirm_dialog.title = "Confirm Reset"
 	reset_confirm_dialog.dialog_text = "Are you sure you want to reset?\nAll progress will be lost!"
@@ -123,18 +130,15 @@ func _setup_settings_ui() -> void:
 	add_child(reset_confirm_dialog)
 
 func _setup_deck_viewer() -> void:
-	# Create deck viewer button (goes in center panel, near booster button)
 	deck_viewer_button = Button.new()
-	deck_viewer_button.text = "View Deck"
+	deck_viewer_button.text = "Collection"
 	deck_viewer_button.custom_minimum_size = Vector2(120, 32)
 	deck_viewer_button.pressed.connect(_on_deck_viewer_pressed)
-	deck_viewer_button.visible = false  # Hidden until unlocked
+	deck_viewer_button.visible = false
 	
-	# Add after booster button
 	var center_vbox = $MarginContainer/MainHBox/CenterPanel/VBox
 	center_vbox.add_child(deck_viewer_button)
 	
-	# Create deck viewer popup
 	deck_viewer_popup = DECK_VIEWER_SCENE.instantiate()
 	add_child(deck_viewer_popup)
 
@@ -142,9 +146,17 @@ func _on_deck_viewer_pressed() -> void:
 	deck_viewer_popup.open()
 
 func _on_settings_pressed() -> void:
+	# Update auto-draw toggle state before showing
+	auto_draw_toggle.visible = GameState.auto_draw_unlocked
+	auto_draw_toggle.button_pressed = GameState.auto_draw_enabled
+	
 	var button_rect = settings_button.get_global_rect()
 	settings_popup.position = Vector2(button_rect.position.x, button_rect.position.y + button_rect.size.y + 4)
 	settings_popup.popup()
+
+func _on_auto_draw_toggled(toggled_on: bool) -> void:
+	if toggled_on != GameState.auto_draw_enabled:
+		GameState.toggle_auto_draw()
 
 func _on_save_pressed() -> void:
 	GameState.save_game()
@@ -155,11 +167,9 @@ func _on_reset_pressed() -> void:
 	reset_confirm_dialog.popup_centered()
 
 func _on_reset_confirmed() -> void:
-	# Delete save file
 	var dir = DirAccess.open("user://")
 	if dir:
 		dir.remove("card_combiner_save.cfg")
-	# Reset GameState to defaults and reload
 	GameState.reset_to_defaults()
 	get_tree().reload_current_scene()
 
@@ -170,72 +180,46 @@ func _on_merge_attempted(source_index: int, target_index: int) -> void:
 			slot.play_merge_animation()
 
 func _on_move_attempted(source_index: int, target_index: int) -> void:
-	if GameState.try_move_hand_slots(source_index, target_index):
-		var slot = grid.get_slot(target_index)
-		if slot:
-			slot.play_land_animation()
+	GameState.swap_hand_slots(source_index, target_index)
 
 func _on_discard_requested(slot_index: int) -> void:
-	var card = GameState.clear_hand_slot(slot_index)
-	if not card.is_empty():
-		GameState.add_to_discard(card)
-		GameState.log_event("Discarded %s" % GameState.card_to_string(card))
+	GameState.discard_from_hand(slot_index)
 
 func _on_booster_pressed() -> void:
-	if not GameState.can_afford_pack():
+	if not GameState.can_buy_pack():
 		return
 	
-	# Deduct cost and generate cards (but don't add to deck yet)
-	var cost = GameState.get_pack_cost()
-	GameState.points -= cost
-	var cards = GameState._generate_pack(GameState.current_tier)
-	
-	if not GameState.has_bought_pack:
-		GameState.has_bought_pack = true
+	var cards = GameState.buy_pack()
+	if cards.is_empty():
+		return
 	
 	_update_booster_button()
 	_update_panel_visibility()
 	
-	# Show pack opening popup
 	var popup = PACK_OPENING_SCENE.instantiate()
 	add_child(popup)
-	popup.closed.connect(_on_pack_opening_closed.bind(cards))
 	popup.open(cards, GameState.current_tier)
-
-func _on_pack_opening_closed(cards: Array[Dictionary]) -> void:
-	# Add cards to deck now
-	for card in cards:
-		GameState.deck.push_back(card)
-	GameState.deck.shuffle()
-	
-	var card_strings: Array[String] = []
-	for card in cards:
-		card_strings.append(GameState.card_to_string(card))
-	GameState.log_event("Added to deck: %s" % ", ".join(card_strings))
-	
-	GameState.deck_changed.emit()
 
 func _on_points_changed(_value: int) -> void:
 	_update_booster_button()
 
 func _on_hand_changed() -> void:
-	pass  # Grid handles its own sync
+	pass
 
 func _update_booster_button() -> void:
-	# Only show after first merge
 	booster_button.visible = GameState.has_merged
 	
 	if booster_button.visible:
 		var cost = GameState.get_pack_cost()
 		var tier_num = GameState.TIER_NUMERALS[GameState.current_tier]
 		booster_button.text = "BUY T%s BOOSTER PACK - %d pts" % [tier_num, cost]
-		booster_button.disabled = not GameState.can_afford_pack()
+		booster_button.disabled = not GameState.can_buy_pack()
 
 func _update_panel_visibility() -> void:
-	# Milestone panel shows after first pack purchase
 	milestone_container.visible = GameState.has_bought_pack
-	
-	# Deck viewer button shows after T2 unlock
 	deck_viewer_button.visible = GameState.deck_viewer_unlocked
-	
-	# Upgrades panel handles its own visibility based on unlocked upgrades
+
+func _update_settings_visibility() -> void:
+	_update_panel_visibility()
+	if auto_draw_toggle:
+		auto_draw_toggle.visible = GameState.auto_draw_unlocked
