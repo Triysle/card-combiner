@@ -2,54 +2,82 @@
 extends Node
 
 ## Singleton registry for all monsters - autoloaded before GameState
-## Uses MonsterSpecies resources (MID = one chain with multiple forms)
+## Uses explicit preloads for web export compatibility
 
 var _species: Dictionary = {}  # MID (int) -> MonsterSpecies
 
+# Explicitly preload all monster species for web export compatibility
+# DirAccess.open() doesn't work reliably in web exports
+const MONSTER_RESOURCES: Array[Resource] = [
+	preload("res://resources/monsters/001_alien.tres"),
+	preload("res://resources/monsters/002_antlion.tres"),
+	preload("res://resources/monsters/003_armed_rocket.tres"),
+	preload("res://resources/monsters/004_armed_rocks.tres"),
+	preload("res://resources/monsters/005_beaker_slime.tres"),
+	preload("res://resources/monsters/006_bees.tres"),
+	preload("res://resources/monsters/007_bombardier_ant.tres"),
+	preload("res://resources/monsters/008_bookworm.tres"),
+	preload("res://resources/monsters/009_boxing_marsupial.tres"),
+	preload("res://resources/monsters/010_buff_vegetable.tres"),
+	preload("res://resources/monsters/011_chameleon.tres"),
+	preload("res://resources/monsters/012_chickensaurus.tres"),
+	preload("res://resources/monsters/013_chime_angel.tres"),
+	preload("res://resources/monsters/014_chimera.tres"),
+	preload("res://resources/monsters/015_clockwork_toy.tres"),
+	preload("res://resources/monsters/016_clown_frog.tres"),
+	preload("res://resources/monsters/017_cupid.tres"),
+	preload("res://resources/monsters/018_dead_fish.tres"),
+	preload("res://resources/monsters/019_dragonfly.tres"),
+	preload("res://resources/monsters/020_dummy.tres"),
+	preload("res://resources/monsters/021_electric_rat.tres"),
+	preload("res://resources/monsters/022_emotional_balloon.tres"),
+	preload("res://resources/monsters/023_fashion_fox.tres"),
+	preload("res://resources/monsters/024_fire_aardvark.tres"),
+	preload("res://resources/monsters/025_fire_bird.tres"),
+	preload("res://resources/monsters/026_forest_nymph.tres"),
+	preload("res://resources/monsters/027_fruity.tres"),
+	preload("res://resources/monsters/028_garbage_slug.tres"),
+	preload("res://resources/monsters/029_gingerbread.tres"),
+	preload("res://resources/monsters/030_icy_pig.tres"),
+	preload("res://resources/monsters/031_karate_dog.tres"),
+	preload("res://resources/monsters/032_lost_soul.tres"),
+	preload("res://resources/monsters/033_man_o_war.tres"),
+	preload("res://resources/monsters/034_mantis_shrimp.tres"),
+	preload("res://resources/monsters/035_mighty_oak.tres"),
+	preload("res://resources/monsters/036_mimic_spider.tres"),
+	preload("res://resources/monsters/037_mirror.tres"),
+	preload("res://resources/monsters/038_molecule.tres"),
+	preload("res://resources/monsters/039_mummy_bug.tres"),
+	preload("res://resources/monsters/040_musical_bat.tres"),
+	preload("res://resources/monsters/041_paper_parrot.tres"),
+	preload("res://resources/monsters/042_pinball.tres"),
+	preload("res://resources/monsters/043_plant_reptile.tres"),
+	preload("res://resources/monsters/044_plug_cyclops.tres"),
+	preload("res://resources/monsters/045_robbing_robin.tres"),
+	preload("res://resources/monsters/046_seadragon.tres"),
+	preload("res://resources/monsters/047_snowman_yeti.tres"),
+	preload("res://resources/monsters/048_statue.tres"),
+	preload("res://resources/monsters/049_storm_cloud.tres"),
+	preload("res://resources/monsters/050_tapeworm.tres"),
+	preload("res://resources/monsters/051_tardigrade.tres"),
+	preload("res://resources/monsters/052_time_cat.tres"),
+	preload("res://resources/monsters/053_toilet_mimic.tres"),
+	preload("res://resources/monsters/054_trash_monster.tres"),
+	preload("res://resources/monsters/055_ugly_duckling.tres"),
+	preload("res://resources/monsters/056_wasps_nest.tres"),
+	preload("res://resources/monsters/057_water_fish.tres"),
+	preload("res://resources/monsters/058_wisp.tres"),
+	preload("res://resources/monsters/059_z_placeholder.tres"),
+]
+
 func _ready() -> void:
 	_load_species()
-	if _species.is_empty():
-		_create_placeholder_species()
 
 func _load_species() -> void:
-	var dir = DirAccess.open("res://resources/monsters")
-	if dir == null:
-		push_warning("MonsterRegistry: Could not open resources/monsters directory")
-		return
-	
-	dir.list_dir_begin()
-	var file_name = dir.get_next()
-	while file_name != "":
-		if file_name.ends_with(".tres"):
-			var path = "res://resources/monsters/" + file_name
-			var species = load(path) as MonsterSpecies
-			if species:
-				_species[species.id] = species
-		file_name = dir.get_next()
-	dir.list_dir_end()
-
-func _create_placeholder_species() -> void:
-	# Create test species with multiple forms each
-	var placeholders = [
-		{id = 1, name = "Alien", form_count = 2},
-		{id = 2, name = "Blob", form_count = 3},
-		{id = 3, name = "Crystal", form_count = 2},
-		{id = 4, name = "Demon", form_count = 3},
-	]
-	
-	for data in placeholders:
-		var species = MonsterSpecies.new()
-		species.id = data.id
-		species.name = data.name
-		
-		for i in range(data.form_count):
-			var form = MonsterForm.new()
-			form.form_index = i + 1
-			form.display_name = ""  # Will use species name + numeral
-			form.can_evolve = (i < data.form_count - 1)
-			species.forms.append(form)
-		
-		_species[species.id] = species
+	for resource in MONSTER_RESOURCES:
+		var species = resource as MonsterSpecies
+		if species:
+			_species[species.id] = species
 
 # === PUBLIC API ===
 
