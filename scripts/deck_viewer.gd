@@ -47,10 +47,10 @@ func _on_close_pressed() -> void:
 	closed.emit()
 
 func _get_window_size() -> Vector2:
-	# Use the viewport size - most reliable across platforms including web
-	var viewport = get_viewport()
-	if viewport:
-		return viewport.get_visible_rect().size
+	# Use parent's size since main scene resizes correctly in web exports
+	var parent = get_parent()
+	if parent and parent is Control:
+		return parent.size
 	# Fallback to root size
 	return get_tree().root.size
 
@@ -157,8 +157,8 @@ func _calculate_sizes() -> void:
 	var card_height = card_width / 0.75
 	
 	# Clamp to reasonable bounds
-	card_width = clampf(card_width, 60, 600)
-	card_height = clampf(card_height, 80, 500)
+	card_width = clampf(card_width, 60, 200)
+	card_height = clampf(card_height, 80, 267)
 	
 	card_size = Vector2(card_width, card_height)
 
