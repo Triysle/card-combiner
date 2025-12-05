@@ -51,7 +51,7 @@ func open() -> void:
 	_calculate_max_forms()
 	
 	# Get actual window size
-	var window_size = get_tree().root.size
+	var window_size = DisplayServer.window_get_size()
 	
 	_calculate_sizes()
 	_refresh_display()
