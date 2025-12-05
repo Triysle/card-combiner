@@ -39,35 +39,47 @@ func _ready() -> void:
 	close_button.pressed.connect(_on_close_pressed)
 	GameState.collection_changed.connect(_refresh_display)
 	GameState.deck_changed.connect(_refresh_display)
+	# Ensure scroll container clips its contents
+	scroll_container.clip_contents = true
 
 func _on_close_pressed() -> void:
 	hide()
 	closed.emit()
 
+func _get_window_size() -> Vector2:
+	# Use the viewport size - most reliable across platforms including web
+	var viewport = get_viewport()
+	if viewport:
+		return viewport.get_visible_rect().size
+	# Fallback to root size
+	return get_tree().root.size
+
 func open() -> void:
-	# Wait for viewport to settle (helps with web exports)
-	await get_tree().process_frame
-	
 	_calculate_max_forms()
 	
 	# Get actual window size
-	var window_size = DisplayServer.window_get_size()
+	var window_size = _get_window_size()
 	
 	_calculate_sizes()
 	_refresh_display()
 	
 	# Calculate target size
-	var target_size = Vector2i(window_size.x - (SCREEN_PADDING * 2), window_size.y - (SCREEN_PADDING * 2))
+	var target_width = int(window_size.x) - (SCREEN_PADDING * 2)
+	var target_height = int(window_size.y) - (SCREEN_PADDING * 2)
+	var target_size = Vector2i(target_width, target_height)
 	
-	# Set min_size to prevent shrinking
-	min_size = target_size
+	# Reset min_size to allow smaller sizes
+	min_size = Vector2i.ZERO
+	
+	# Set max_size to constrain the popup (key fix for web exports)
+	max_size = target_size
 	
 	# Show and position
 	position = Vector2i(SCREEN_PADDING, SCREEN_PADDING)
 	size = target_size
 	show()
 	
-	# Force size again after show (some Godot versions need this)
+	# Force size again after show
 	call_deferred("_force_size", target_size)
 
 ## Open collection and scroll to specific MID, optionally animate a card flip
@@ -116,6 +128,8 @@ func _scroll_to_mid(mid: int) -> void:
 
 func _force_size(target: Vector2i) -> void:
 	size = target
+	# Also ensure max_size is set
+	max_size = target
 
 func _calculate_max_forms() -> void:
 	max_forms = 1
@@ -124,26 +138,27 @@ func _calculate_max_forms() -> void:
 		max_forms = maxi(max_forms, species.get_form_count())
 
 func _calculate_sizes() -> void:
-	# Get actual window size (same source as open())
-	var window_size = get_tree().root.size
+	# Get actual window size (use same method as open())
+	var window_size = _get_window_size()
 	
 	# Calculate popup size (nearly fullscreen)
 	var popup_width = window_size.x - (SCREEN_PADDING * 2)
 	
 	# Calculate available space for cards
-	# Subtract: margins, MID column, spacing
-	var available_width = popup_width - 60 - MID_COLUMN_WIDTH - (CELL_SPACING * 5)
+	# Subtract: margins (24+16 on each side = 80), MID column, spacing between 5 cards
+	var margin_space = 80  # MarginContainer + StyleBox margins
+	var available_width = popup_width - margin_space - MID_COLUMN_WIDTH - (CELL_SPACING * (max_forms + 1))
 	
 	# Ensure at least 5 cards fit horizontally (no horizontal scroll)
-	var min_columns = 5
+	var min_columns = maxi(max_forms, 5)
 	var card_width = available_width / min_columns
 	
 	# Maintain 3:4 aspect ratio (width:height)
 	var card_height = card_width / 0.75
 	
 	# Clamp to reasonable bounds
-	card_width = clampf(card_width, 80, 200)
-	card_height = clampf(card_height, 106, 267)
+	card_width = clampf(card_width, 60, 600)
+	card_height = clampf(card_height, 80, 500)
 	
 	card_size = Vector2(card_width, card_height)
 
