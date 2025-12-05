@@ -45,6 +45,9 @@ func _on_close_pressed() -> void:
 	closed.emit()
 
 func open() -> void:
+	# Wait for viewport to settle (helps with web exports)
+	await get_tree().process_frame
+	
 	_calculate_max_forms()
 	
 	# Get actual window size
