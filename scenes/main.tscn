@@ -1,12 +1,27 @@
-[gd_scene load_steps=8 format=3 uid="uid://cqivk7eqsqfwv"]
+[gd_scene load_steps=13 format=3 uid="uid://cqivk7eqsqfwv"]
 
 [ext_resource type="Script" uid="uid://ca6lmpkdfo38s" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/grid.tscn" id="2_grid"]
-[ext_resource type="PackedScene" uid="uid://hchi7bvdcooe" path="res://scenes/hud.tscn" id="3_hud"]
-[ext_resource type="PackedScene" uid="uid://bgc761tvvpkuq" path="res://scenes/deck_pile.tscn" id="4_deck"]
-[ext_resource type="PackedScene" path="res://scenes/discard_pile.tscn" id="5_discard"]
-[ext_resource type="PackedScene" path="res://scenes/milestone_panel.tscn" id="6_milestone"]
-[ext_resource type="PackedScene" uid="uid://crrsoc4g23no7" path="res://scenes/upgrades_panel.tscn" id="7_upgrades"]
+[ext_resource type="PackedScene" uid="uid://bgc761tvvpkuq" path="res://scenes/deck_pile.tscn" id="3_deck"]
+[ext_resource type="PackedScene" path="res://scenes/discard_pile.tscn" id="4_discard"]
+[ext_resource type="PackedScene" uid="uid://dl4i4phf050xx" path="res://scenes/points_panel.tscn" id="5_points"]
+[ext_resource type="PackedScene" uid="uid://crrsoc4g23no7" path="res://scenes/upgrades_panel.tscn" id="6_upgrades"]
+[ext_resource type="PackedScene" uid="uid://cbac34sf4chnn" path="res://scenes/collection_panel.tscn" id="7_collection"]
+[ext_resource type="PackedScene" path="res://scenes/settings_popup.tscn" id="9_settings"]
+[ext_resource type="PackedScene" uid="uid://cn38t5m6o5p4a" path="res://scenes/how_to_play_popup.tscn" id="10_howto"]
+[ext_resource type="PackedScene" uid="uid://bjfgvkpk5aob8" path="res://scenes/debug_panel.tscn" id="11_debug"]
+[ext_resource type="Texture2D" uid="uid://dhtvghbksvbbs" path="res://assets/UI/panel_bg.svg" id="12_title_bg"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_title"]
+content_margin_left = 16.0
+content_margin_top = 6.0
+content_margin_right = 16.0
+content_margin_bottom = 6.0
+texture = ExtResource("12_title_bg")
+texture_margin_left = 8.0
+texture_margin_top = 8.0
+texture_margin_right = 8.0
+texture_margin_bottom = 8.0
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -42,30 +57,23 @@ theme_override_constants/margin_bottom = 16
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="LeftPanel" type="PanelContainer" parent="MarginContainer/MainHBox"]
-custom_minimum_size = Vector2(180, 0)
-layout_mode = 2
-
-[node name="HUD" parent="MarginContainer/MainHBox/LeftPanel" instance=ExtResource("3_hud")]
-layout_mode = 2
-
 [node name="CenterPanel" type="VBoxContainer" parent="MarginContainer/MainHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="MarginContainer/MainHBox/CenterPanel"]
+[node name="TitlePanel" type="PanelContainer" parent="MarginContainer/MainHBox/CenterPanel"]
 layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/panel = SubResource("StyleBoxTexture_title")
+
+[node name="Title" type="Label" parent="MarginContainer/MainHBox/CenterPanel/TitlePanel"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.15, 0.1, 1)
 theme_override_font_sizes/font_size = 24
 text = "CARD COMBINER"
 horizontal_alignment = 1
-
-[node name="Instructions" type="Label" parent="MarginContainer/MainHBox/CenterPanel"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.6, 0.65, 1)
-text = "Click DECK to draw • Drag cards to merge or place in hand"
-horizontal_alignment = 1
-autowrap_mode = 2
+vertical_alignment = 1
 
 [node name="VBox" type="VBoxContainer" parent="MarginContainer/MainHBox/CenterPanel"]
 layout_mode = 2
@@ -73,15 +81,28 @@ size_flags_vertical = 3
 theme_override_constants/separation = 16
 alignment = 1
 
+[node name="BoosterButton" type="Button" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "BUY BOOSTER PACK - 100 pts"
+
 [node name="DeckArea" type="HBoxContainer" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_constants/separation = 24
 
-[node name="DeckPile" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("4_deck")]
+[node name="DeckPile" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("3_deck")]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="DiscardPile" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("5_discard")]
+[node name="DebugPanel" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("11_debug")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="DiscardPile" parent="MarginContainer/MainHBox/CenterPanel/VBox/DeckArea" instance=ExtResource("4_discard")]
+unique_name_in_owner = true
 layout_mode = 2
 
 [node name="GridLabel" type="Label" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
@@ -91,26 +112,48 @@ text = "HAND"
 horizontal_alignment = 1
 
 [node name="Grid" parent="MarginContainer/MainHBox/CenterPanel/VBox" instance=ExtResource("2_grid")]
+unique_name_in_owner = true
 layout_mode = 2
-
-[node name="BoosterButton" type="Button" parent="MarginContainer/MainHBox/CenterPanel/VBox"]
-visible = false
-custom_minimum_size = Vector2(200, 40)
-layout_mode = 2
-size_flags_horizontal = 4
-text = "BUY BOOSTER PACK - 100 pts"
 
 [node name="RightPanel" type="VBoxContainer" parent="MarginContainer/MainHBox"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="UpgradesPanel" parent="MarginContainer/MainHBox/RightPanel" instance=ExtResource("7_upgrades")]
+[node name="PointsPanel" parent="MarginContainer/MainHBox/RightPanel" instance=ExtResource("5_points")]
+unique_name_in_owner = true
 layout_mode = 2
 
-[node name="MilestonePanelContainer" type="PanelContainer" parent="MarginContainer/MainHBox/RightPanel"]
+[node name="UpgradesPanel" parent="MarginContainer/MainHBox/RightPanel" instance=ExtResource("6_upgrades")]
+unique_name_in_owner = true
 layout_mode = 2
-size_flags_vertical = 3
 
-[node name="MilestonePanel" parent="MarginContainer/MainHBox/RightPanel/MilestonePanelContainer" instance=ExtResource("6_milestone")]
+[node name="CollectionPanel" parent="MarginContainer/MainHBox/RightPanel" instance=ExtResource("7_collection")]
+unique_name_in_owner = true
 layout_mode = 2
+
+[node name="TopLeftButtons" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 116.0
+offset_bottom = 88.0
+theme_override_constants/separation = 4
+
+[node name="SettingsButton" type="Button" parent="TopLeftButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 32)
+layout_mode = 2
+text = "Settings"
+
+[node name="HowToPlayButton" type="Button" parent="TopLeftButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 32)
+layout_mode = 2
+text = "How to Play"
+
+[node name="SettingsPopup" parent="." instance=ExtResource("9_settings")]
+unique_name_in_owner = true
+
+[node name="HowToPlayPopup" parent="." instance=ExtResource("10_howto")]
+unique_name_in_owner = true

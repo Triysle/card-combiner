@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=7 format=3 uid="uid://isgl6utvp10x"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://cua72dmv840n" path="res://assets/monsters/Karate Dog (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://dshe4nf4vwkgm" path="res://assets/monsters/Karate Dog (2).png" id="2_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Fren"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Bibinu"
+sprite = ExtResource("2_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 31
+name = "Karate Dog"
+base_color = Color(0.775, 0.155, 0.441493, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2")])

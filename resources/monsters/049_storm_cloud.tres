@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=5 format=3 uid="uid://bkckb5dia08rw"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://bey72uqtlmjgb" path="res://assets/monsters/Storm Cloud.png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Storset"
+sprite = ExtResource("1_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 49
+name = "Storm Cloud"
+base_color = Color(0.925, 0.396333, 0.185, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1")])

@@ -1,0 +1,105 @@
+[gd_scene load_steps=5 format=3 uid="uid://cbac34sf4chnn"]
+
+[ext_resource type="Texture2D" uid="uid://dhtvghbksvbbs" path="res://assets/UI/panel_bg.svg" id="1_panel"]
+[ext_resource type="Texture2D" uid="uid://dnqeejx0qc062" path="res://assets/UI/slot_bg.svg" id="2_slot"]
+[ext_resource type="Script" uid="uid://doliuvbfdlgnx" path="res://scripts/collection_panel.gd" id="3_script"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel"]
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+texture = ExtResource("1_panel")
+texture_margin_left = 6.0
+texture_margin_top = 6.0
+texture_margin_right = 6.0
+texture_margin_bottom = 6.0
+
+[node name="CollectionPanel" type="PanelContainer"]
+theme_override_styles/panel = SubResource("StyleBoxTexture_panel")
+script = ExtResource("3_script")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.2, 0.15, 1)
+theme_override_font_sizes/font_size = 16
+text = "COLLECTION"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBox"]
+layout_mode = 2
+
+[node name="OpenButton" type="Button" parent="VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+text = "Open Collection"
+
+[node name="Spacer" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="SlotCenter" type="CenterContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="Slot" type="Panel" parent="VBox/SlotCenter"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 160)
+layout_mode = 2
+
+[node name="SlotBackground" type="NinePatchRect" parent="VBox/SlotCenter/Slot"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_slot")
+patch_margin_left = 4
+patch_margin_top = 4
+patch_margin_right = 4
+patch_margin_bottom = 4
+
+[node name="EmptyLabel" type="Label" parent="VBox/SlotCenter/Slot"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.4, 0.35, 0.3, 1)
+text = "Drop MAX
+card here"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CardContainer" type="Control" parent="VBox/SlotCenter/Slot"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Spacer2" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="AddButton" type="Button" parent="VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+disabled = true
+text = "Add to Collection"

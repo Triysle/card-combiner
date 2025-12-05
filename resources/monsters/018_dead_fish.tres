@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=5 format=3 uid="uid://darsbjcnkgrh2"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://deg2iwsgr33v1" path="res://assets/monsters/Dead Fish.png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Glouhb"
+sprite = ExtResource("1_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 18
+name = "Dead Fish"
+base_color = Color(0.7, 0.245, 0.549275, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1")])

@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://c4hupttle56oi"]
 
-[ext_resource type="Script" path="res://scripts/credits_overlay.gd" id="1_credits"]
+[ext_resource type="Script" uid="uid://bakpl2xatq834" path="res://scripts/credits_overlay.gd" id="1_credits"]
 
 [node name="CreditsOverlay" type="CanvasLayer"]
 layer = 10

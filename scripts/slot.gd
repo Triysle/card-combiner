@@ -7,7 +7,6 @@ extends Panel
 signal merge_attempted(source_slot: Slot, target_slot: Slot)
 signal move_attempted(source_slot: Slot, target_slot: Slot)
 signal hover_started(slot: Slot)
-signal discard_requested(slot: Slot)
 
 var slot_index: int = -1
 
@@ -21,14 +20,14 @@ var _drop_state: DropState = DropState.NONE
 
 var _anim_tween: Tween = null
 
-@onready var empty_label: Label = $EmptyLabel
+var _card_display: Control = null  # CardDisplay instance
+
 @onready var card_container: Control = $CardContainer
 @onready var origin_indicator: ColorRect = $OriginIndicator
 @onready var drop_indicator: ColorRect = $DropIndicator
-@onready var rank_label: Label = $CardContainer/VBox/RankLabel
-@onready var tier_label: Label = $CardContainer/VBox/TierLabel
-@onready var output_label: Label = $CardContainer/VBox/OutputLabel
-@onready var card_background: ColorRect = $CardContainer/CardBackground
+@onready var output_label: Label = $OutputLabel
+
+const CARD_DISPLAY_SCENE = preload("res://scenes/card_display.tscn")
 
 func _ready() -> void:
 	origin_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -54,41 +53,45 @@ func clear_card() -> void:
 	_update_display()
 
 func is_empty() -> bool:
-	return card_data.is_empty()
+	return not CardFactory.is_valid_card(card_data)
 
 func get_card_data() -> Dictionary:
 	return card_data
 
 func get_output() -> int:
-	return GameState.get_card_points_value(card_data)
+	return CardFactory.get_card_points_value(card_data)
 
 func _update_display() -> void:
 	if not is_node_ready():
 		return
 	
-	var is_empty_slot = card_data.is_empty()
+	var is_empty_slot = CardFactory.is_empty_card(card_data)
 	
 	origin_indicator.visible = _is_drag_origin
 	drop_indicator.visible = _drop_state != DropState.NONE
 	if _drop_state != DropState.NONE:
 		_update_drop_indicator_style()
 	
-	empty_label.visible = is_empty_slot and not _is_drag_origin and _drop_state == DropState.NONE
 	card_container.visible = not is_empty_slot and not _is_drag_origin
+	output_label.visible = not is_empty_slot and not _is_drag_origin
 	
 	if not is_empty_slot:
 		_update_card_display()
 
 func _update_card_display() -> void:
-	var rank = card_data.get("rank", 0)
-	var tier = card_data.get("tier", 0)
+	# Remove existing card display
+	if _card_display:
+		_card_display.queue_free()
+		_card_display = null
 	
-	rank_label.text = "Rank %d" % rank
-	tier_label.text = "Tier %s" % CardFactory.get_tier_numeral(tier) if tier > 0 else ""
+	# Create new CardDisplay
+	_card_display = CARD_DISPLAY_SCENE.instantiate()
+	_card_display.setup(card_data, Vector2(112, 146))
+	_card_display.position = Vector2(4, 4)
+	_card_display.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card_container.add_child(_card_display)
+	
 	_update_output_display()
-	
-	# Set card color using CardFactory
-	card_background.color = CardFactory.get_card_color(tier, rank)
 
 func _update_output_display() -> void:
 	output_label.text = "+%d/s" % get_output()
@@ -140,14 +143,20 @@ func play_merge_animation() -> void:
 
 # === Drag and Drop ===
 
+func _create_drag_preview(card: Dictionary) -> Control:
+	var card_display_scene = preload("res://scenes/card_display.tscn")
+	var preview = card_display_scene.instantiate()
+	preview.setup(card, Vector2(100, 130))
+	return preview
+
 func _get_drag_data(_pos: Vector2) -> Variant:
-	if card_data.is_empty():
+	if CardFactory.is_empty_card(card_data):
 		return null
 	
 	_is_drag_origin = true
 	_update_display()
 	
-	var preview = CardFactory.create_drag_preview(card_data)
+	var preview = _create_drag_preview(card_data)
 	set_drag_preview(preview)
 	
 	return {source = "hand", slot = self, card = card_data}
@@ -157,6 +166,9 @@ func _notification(what: int) -> void:
 		_is_drag_origin = false
 		_update_display()
 
+func _can_merge(card_a: Dictionary, card_b: Dictionary) -> bool:
+	return GameState.validate_merge(card_a, card_b) == GameState.MergeResult.SUCCESS
+
 func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 	if not data is Dictionary:
 		_set_drop_state(DropState.NONE)
@@ -165,12 +177,12 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 	var source = data.get("source", "")
 	var incoming_card = data.get("card", {})
 	
-	if incoming_card.is_empty():
+	if CardFactory.is_empty_card(incoming_card):
 		_set_drop_state(DropState.NONE)
 		return false
 	
-	# Accept from hand, discard, or milestone
-	if source != "hand" and source != "discard" and source != "milestone":
+	# Accept from hand or discard
+	if source != "hand" and source != "discard":
 		_set_drop_state(DropState.NONE)
 		return false
 	
@@ -178,19 +190,16 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 	hover_started.emit(self)
 	
 	# Can always drop on empty slot
-	if card_data.is_empty():
+	if CardFactory.is_empty_card(card_data):
 		_set_drop_state(DropState.VALID_MOVE)
 		return true
 	
 	# Check for merge
-	if GameState.can_merge(incoming_card, card_data):
+	if _can_merge(incoming_card, card_data):
 		_set_drop_state(DropState.VALID_MERGE)
 		return true
 	else:
-		# Can swap (except milestone which requires specific cards)
-		if source == "milestone":
-			_set_drop_state(DropState.INVALID)
-			return true
+		# Can swap
 		_set_drop_state(DropState.VALID_SWAP)
 		return true
 
@@ -209,30 +218,31 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 		if source_slot == self:
 			return
 		
-		if card_data.is_empty():
+		if CardFactory.is_empty_card(card_data):
 			# Simple move
 			move_attempted.emit(source_slot, self)
-		elif GameState.can_merge(incoming_card, card_data):
+		elif _can_merge(incoming_card, card_data):
 			# Merge
 			merge_attempted.emit(source_slot, self)
 		else:
-			# Swap hand slots - GameState.swap_hand_slots emits hand_changed
-			# which triggers Grid._sync_from_game_state to update all slot visuals
-			GameState.swap_hand_slots(source_slot.slot_index, slot_index)
-			# Play animations after sync happens
-			call_deferred("play_land_animation")
-			source_slot.call_deferred("play_land_animation")
-			GameState.log_event("Swapped cards")
+			# Swap hand slots
+			var temp = card_data
+			set_card(incoming_card)
+			source_slot.set_card(temp)
+			GameState.set_hand_slot(slot_index, incoming_card)
+			GameState.set_hand_slot(source_slot.slot_index, temp)
+			play_land_animation()
+			source_slot.play_land_animation()
 	
 	# Handle drop from discard pile
 	elif source == "discard":
-		if card_data.is_empty():
+		if CardFactory.is_empty_card(card_data):
 			# Place card from discard
 			GameState.take_from_discard()
 			set_card(incoming_card)
 			GameState.set_hand_slot(slot_index, incoming_card)
 			play_land_animation()
-		elif GameState.can_merge(incoming_card, card_data):
+		elif _can_merge(incoming_card, card_data):
 			# Merge with discard card
 			GameState.take_from_discard()
 			var result = GameState.merge_cards(incoming_card, card_data)
@@ -247,40 +257,3 @@ func _drop_data(_pos: Vector2, data: Variant) -> void:
 			GameState.set_hand_slot(slot_index, incoming_card)
 			GameState.add_to_discard(old_hand_card)
 			play_land_animation()
-			GameState.log_event("Swapped %s with discard" % CardFactory.card_to_string(incoming_card))
-	
-	# Handle drop from milestone slot
-	elif source == "milestone":
-		var milestone_slot = data.get("slot")
-		if card_data.is_empty():
-			# Place card from milestone into hand
-			if milestone_slot:
-				milestone_slot.clear_card()
-				GameState.clear_milestone_slot(milestone_slot.slot_index)
-			set_card(incoming_card)
-			GameState.set_hand_slot(slot_index, incoming_card)
-			play_land_animation()
-			GameState.log_event("Moved %s from milestone to hand" % CardFactory.card_to_string(incoming_card))
-		elif GameState.can_merge(incoming_card, card_data):
-			# Merge milestone card with hand card
-			if milestone_slot:
-				milestone_slot.clear_card()
-				GameState.clear_milestone_slot(milestone_slot.slot_index)
-			var result = GameState.merge_cards(incoming_card, card_data)
-			set_card(result)
-			GameState.set_hand_slot(slot_index, result)
-			play_merge_animation()
-		else:
-			# Swap: hand card goes to milestone (if valid), milestone card to hand
-			# For simplicity, just reject swap since milestone requires specific cards
-			GameState.log_event("Cannot swap - milestone requires specific card")
-
-func _log_merge_failure(card1: Dictionary, card2: Dictionary) -> void:
-	var result = GameState.validate_merge(card1, card2)
-	match result:
-		GameState.MergeResult.INVALID_TIER:
-			GameState.log_event("Cannot merge: different tiers")
-		GameState.MergeResult.INVALID_RANK:
-			GameState.log_event("Cannot merge: different ranks")
-		GameState.MergeResult.INVALID_MAX_RANK:
-			GameState.log_event("Cannot merge: max rank reached")

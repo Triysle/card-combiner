@@ -1,0 +1,64 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/unlock_popup.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dhtvghbksvbbs" path="res://assets/UI/panel_bg.svg" id="2_panel"]
+
+[node name="UnlockPopup" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_script")
+
+[node name="Overlay" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0)
+
+[node name="CenterContainer" type="CenterContainer" parent="Overlay"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PopupBackground" type="NinePatchRect" parent="Overlay/CenterContainer"]
+custom_minimum_size = Vector2(400, 340)
+layout_mode = 2
+texture = ExtResource("2_panel")
+patch_margin_left = 48
+patch_margin_top = 48
+patch_margin_right = 48
+patch_margin_bottom = 48
+
+[node name="VBox" type="VBoxContainer" parent="Overlay/CenterContainer/PopupBackground"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 32.0
+offset_top = 24.0
+offset_right = -32.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Overlay/CenterContainer/PopupBackground/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.15, 0.1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Unlocked New Form!"
+horizontal_alignment = 1
+
+[node name="CardContainer" type="Control" parent="Overlay/CenterContainer/PopupBackground/VBox"]
+custom_minimum_size = Vector2(336, 170)
+layout_mode = 2
+
+[node name="AddButton" type="Button" parent="Overlay/CenterContainer/PopupBackground/VBox"]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+modulate = Color(1, 1, 1, 0)
+text = "Add to Deck"

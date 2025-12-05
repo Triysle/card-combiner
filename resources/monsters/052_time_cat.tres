@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=7 format=3 uid="uid://bh4rgl4rjbngc"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://b3gej885apvxd" path="res://assets/monsters/Time Cat (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://cdy6wr4mpibr" path="res://assets/monsters/Time Cat (2).png" id="2_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Meowment"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Purrpetual"
+sprite = ExtResource("2_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 52
+name = "Time Cat"
+base_color = Color(0.85, 0.17, 0.571066, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2")])

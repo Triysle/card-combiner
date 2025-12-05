@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=9 format=3 uid="uid://cjdof2545xly6"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://cipgbdk2eko1j" path="res://assets/monsters/Water Fish (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://brckikhkbehlc" path="res://assets/monsters/Water Fish (2).png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://03t1gdaxofvv" path="res://assets/monsters/Water Fish (3).png" id="3_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Gruppy"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Dalfin"
+sprite = ExtResource("2_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_3"]
+script = ExtResource("2_form")
+form_index = 3
+display_name = "Waler"
+sprite = ExtResource("3_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 57
+name = "Water Fish"
+base_color = Color(0.925, 0.32375, 0.353081, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2"), SubResource("form_3")])

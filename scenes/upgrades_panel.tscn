@@ -1,32 +1,80 @@
-[gd_scene load_steps=2 format=3 uid="uid://crrsoc4g23no7"]
+[gd_scene load_steps=4 format=3 uid="uid://crrsoc4g23no7"]
 
-[ext_resource type="Script" uid="uid://dfcw1y2jc87vk" path="res://scripts/upgrades_panel.gd" id="1_up"]
+[ext_resource type="Texture2D" uid="uid://dhtvghbksvbbs" path="res://assets/UI/panel_bg.svg" id="1_0s7kc"]
+[ext_resource type="Script" uid="uid://dfcw1y2jc87vk" path="res://scripts/upgrades_panel.gd" id="1_script"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_panel"]
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+texture = ExtResource("1_0s7kc")
+texture_margin_left = 6.0
+texture_margin_top = 6.0
+texture_margin_right = 6.0
+texture_margin_bottom = 6.0
 
 [node name="UpgradesPanel" type="PanelContainer"]
-script = ExtResource("1_up")
+theme_override_styles/panel = SubResource("StyleBoxTexture_panel")
+script = ExtResource("1_script")
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="HeaderButton" type="Button" parent="VBox"]
+[node name="Header" type="Label" parent="VBox"]
 layout_mode = 2
-text = "[-] UPGRADES"
+theme_override_colors/font_color = Color(0.25, 0.2, 0.15, 1)
+theme_override_font_sizes/font_size = 16
+text = "UPGRADES"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="VBox"]
+layout_mode = 2
 
 [node name="Content" type="VBoxContainer" parent="VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="CapLabel" type="Label" parent="VBox/Content"]
+[node name="PointsMult" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.5, 0.55, 0.6, 1)
-theme_override_font_sizes/font_size = 11
-text = "Level cap: 10"
-horizontal_alignment = 1
+theme_override_font_sizes/font_size = 10
+text = "Points Doubler - 100
+Multiplies points by 1x → 2x"
 
-[node name="HSeparator" type="HSeparator" parent="VBox/Content"]
+[node name="DrawSpeed" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Draw Speed - 100
+Draw every 10.0s → 5.0s"
 
-[node name="UpgradesContainer" type="VBoxContainer" parent="VBox/Content"]
+[node name="PackDiscount" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-theme_override_constants/separation = 2
+theme_override_font_sizes/font_size = 10
+text = "Pack Discount - 1K
+Pack cost divided by 1 → 2"
+
+[node name="CriticalMerge" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Critical Merge - 10K
+0% → 10% chance for +2 ranks"
+
+[node name="MinRank" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Min Pack Rank - 10K
+Packs drop R1+ → R2+"
+
+[node name="MaxRank" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Max Pack Rank - 10K
+Packs can drop up to R5 → R6"

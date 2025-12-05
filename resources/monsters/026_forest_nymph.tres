@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=7 format=3 uid="uid://dssnsuuwlari7"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://cvkghvdplulng" path="res://assets/monsters/Forest Nymph (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://c2khwlbykrw3n" path="res://assets/monsters/Forest Nymph (2).png" id="2_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Eppling"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Nymsprit"
+sprite = ExtResource("2_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 26
+name = "Forest Nymph"
+base_color = Color(0.698913, 0.35, 0.7, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2")])

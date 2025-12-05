@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=9 format=3 uid="uid://cx18wb6qt4743"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://cfjp14vfte5cs" path="res://assets/monsters/Bees (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://bb3sgrh714dr5" path="res://assets/monsters/Bees (2).png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://dx4g7gv32yqov" path="res://assets/monsters/Bees (3).png" id="3_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Honeet"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Larvegg"
+sprite = ExtResource("2_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_3"]
+script = ExtResource("2_form")
+form_index = 3
+display_name = "Queenbee"
+sprite = ExtResource("3_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 6
+name = "Bees"
+base_color = Color(0.245, 0.7, 0.623931, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2"), SubResource("form_3")])

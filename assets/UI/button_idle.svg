@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40">
+  <!-- Dark border -->
+  <rect x="0" y="0" width="200" height="40" rx="4" ry="4" fill="#3a3a3a"/>
+  <!-- Bottom shadow area for depth -->
+  <rect x="2" y="2" width="196" height="36" rx="3" ry="3" fill="#787878"/>
+  <!-- Main raised area -->
+  <rect x="2" y="2" width="196" height="32" rx="3" ry="3" fill="#a8a8a8"/>
+</svg>

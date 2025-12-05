@@ -1,6 +1,39 @@
-[gd_resource type="Resource" script_class="CardVisuals" load_steps=2 format=3 uid="uid://d3i60d7r6fwbi"]
+[gd_resource type="Resource" script_class="CardVisuals" load_steps=25 format=3 uid="uid://d3i60d7r6fwbi"]
 
+[ext_resource type="Texture2D" uid="uid://maroignum0hn" path="res://assets/UI/button wider idle.png" id="1_8sjxj"]
+[ext_resource type="Texture2D" uid="uid://6j72ylvx0p4s" path="res://assets/cardbacks/card_back_CCS.png" id="1_b6v3s"]
 [ext_resource type="Script" uid="uid://c3l280enb6214" path="res://scripts/resources/card_visuals.gd" id="1_cv"]
+[ext_resource type="Texture2D" uid="uid://pc56g3myceob" path="res://assets/UI/ribbon.png" id="2_2a20b"]
+[ext_resource type="Texture2D" uid="uid://c4xwhigxgbqp5" path="res://assets/rank_backgrounds/rank_01_solid.svg" id="3_pkwqm"]
+[ext_resource type="Texture2D" uid="uid://cg1k2ay1u6l1o" path="res://assets/rank_backgrounds/rank_02_stripes.svg" id="4_b6v3s"]
+[ext_resource type="Texture2D" uid="uid://bwr1xen1bw24i" path="res://assets/rank_backgrounds/rank_03_dots.svg" id="5_8ka36"]
+[ext_resource type="Texture2D" uid="uid://b1dxx3ucgkql5" path="res://assets/rank_backgrounds/rank_04_diagonal.svg" id="6_7prdw"]
+[ext_resource type="Shader" uid="uid://c3mgv37dibput" path="res://resources/shaders/rank_01_vignette.gdshader" id="7_5dj7q"]
+[ext_resource type="Texture2D" uid="uid://bayiljs85ebme" path="res://assets/rank_backgrounds/rank_05_grid.svg" id="7_kjyw0"]
+[ext_resource type="Shader" uid="uid://dw735b3wws6gq" path="res://resources/shaders/rank_02_diagonal.gdshader" id="8_6f233"]
+[ext_resource type="Texture2D" uid="uid://c6hxb8uwbxwrf" path="res://assets/rank_backgrounds/rank_06_crosshatch.svg" id="8_rmjlb"]
+[ext_resource type="Shader" uid="uid://b0ow1rdgvutuc" path="res://resources/shaders/rank_03_pulse.gdshader" id="9_8f6e5"]
+[ext_resource type="Texture2D" uid="uid://2bonyf4r61t1" path="res://assets/rank_backgrounds/rank_07_diamonds.svg" id="9_j1vfa"]
+[ext_resource type="Texture2D" uid="uid://duuf1is2fqwl0" path="res://assets/rank_backgrounds/rank_08_hexagons.svg" id="10_pr25v"]
+[ext_resource type="Shader" uid="uid://cewnip0rpgh75" path="res://resources/shaders/rank_04_ripple.gdshader" id="10_vf3l2"]
+[ext_resource type="Texture2D" uid="uid://n4vktl6m5l1t" path="res://assets/rank_backgrounds/rank_09_waves.svg" id="11_17l7m"]
+[ext_resource type="Shader" uid="uid://dkx2vjh0fp0y7" path="res://resources/shaders/rank_05_holo.gdshader" id="11_u0o3r"]
+[ext_resource type="Texture2D" uid="uid://cbf18pbjww6v3" path="res://assets/rank_backgrounds/rank_10_ornate.svg" id="12_p5ybg"]
+[ext_resource type="Shader" uid="uid://dy7k8bymhan3t" path="res://resources/shaders/rank_06_prism.gdshader" id="12_pkwqm"]
+[ext_resource type="Shader" uid="uid://dsg4ohdas7rg8" path="res://resources/shaders/rank_07_energy.gdshader" id="13_b6v3s"]
+[ext_resource type="Shader" uid="uid://bmkhl6hdfnnkh" path="res://resources/shaders/rank_08_metallic.gdshader" id="14_8ka36"]
+[ext_resource type="Shader" uid="uid://cirpdllasecal" path="res://resources/shaders/rank_09_electric.gdshader" id="15_7prdw"]
+[ext_resource type="Shader" uid="uid://b614y0bor7qyu" path="res://resources/shaders/rank_10_max.gdshader" id="16_kjyw0"]
 
 [resource]
 script = ExtResource("1_cv")
+card_size = Vector2(120, 160)
+rank_colors = Array[Color]([Color(0.56, 0, 1, 1), Color(0.9340103, 0.6875359, 0.9211831, 1), Color(1, 0.65, 0, 1), Color(0, 0.5, 0, 1), Color(1, 0, 0, 1), Color(0.5010088, 7.219613e-08, 0.2381646, 1), Color(0, 0, 1, 1), Color(0.73496324, 0.40737522, 1.347661e-06, 1), Color(0.08597448, 0.24548066, 0.24430025, 1), Color(1, 1, 1, 1)])
+rank_backgrounds = Array[Texture2D]([ExtResource("3_pkwqm"), ExtResource("4_b6v3s"), ExtResource("5_8ka36"), ExtResource("6_7prdw"), ExtResource("7_kjyw0"), ExtResource("8_rmjlb"), ExtResource("9_j1vfa"), ExtResource("10_pr25v"), ExtResource("11_17l7m"), ExtResource("12_p5ybg")])
+rank_shaders = Array[Shader]([ExtResource("7_5dj7q"), ExtResource("8_6f233"), ExtResource("9_8f6e5"), ExtResource("10_vf3l2"), ExtResource("11_u0o3r"), ExtResource("12_pkwqm"), ExtResource("13_b6v3s"), ExtResource("14_8ka36"), ExtResource("15_7prdw"), ExtResource("16_kjyw0")])
+tier_frames = Array[Texture2D]([null, null, null, null, null, null, null, null, null, null])
+name_plate_texture = ExtResource("2_2a20b")
+info_plate_texture = ExtResource("1_8sjxj")
+tint_plates = true
+card_back_texture = ExtResource("1_b6v3s")
+card_back_symbol = ""

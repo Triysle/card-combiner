@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=13 format=3 uid="uid://b58ax5nrn8g1w"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://br7u7q7tsv8l7" path="res://assets/monsters/Emotional Balloon (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://by1qsd37a3now" path="res://assets/monsters/Emotional Balloon (2).png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://i5nboq8xyab" path="res://assets/monsters/Emotional Balloon (3).png" id="3_tex"]
+[ext_resource type="Texture2D" uid="uid://cslqk77hnqa82" path="res://assets/monsters/Emotional Balloon (4).png" id="4_tex"]
+[ext_resource type="Texture2D" uid="uid://csaa2t8kdpv88" path="res://assets/monsters/Emotional Balloon (5).png" id="5_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Smil"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Fron"
+sprite = ExtResource("2_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_3"]
+script = ExtResource("2_form")
+form_index = 3
+display_name = "Whis"
+sprite = ExtResource("3_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_4"]
+script = ExtResource("2_form")
+form_index = 4
+display_name = "Marilee"
+sprite = ExtResource("4_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_5"]
+script = ExtResource("2_form")
+form_index = 5
+display_name = "Hindeblim"
+sprite = ExtResource("5_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 22
+name = "Emotional Balloon"
+base_color = Color(0.14, 0.7, 0.231884, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2"), SubResource("form_3"), SubResource("form_4"), SubResource("form_5")])

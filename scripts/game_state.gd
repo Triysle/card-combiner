@@ -1,337 +1,229 @@
 # scripts/game_state.gd
 extends Node
 
-## Core game state for Card Combiner - GDD v2
-## 4 always-available upgrades, tier power bonuses from milestones, 10 tiers
+## Game state singleton - manages all game data
+## New progression: submit MAX of form N to unlock form N+1 in packs
 
-const VERSION: String = "0.2"
-const SAVE_PATH: String = "user://card_combiner_save.cfg"
-
-signal points_changed(new_value: int)
-signal tick()
-signal event_logged(message: String)
+# ===== SIGNALS =====
+signal points_changed(value: int)
 signal deck_changed()
 signal discard_changed()
 signal hand_changed()
-signal milestone_changed()
-signal upgrades_changed()
 signal draw_cooldown_changed(remaining: float, total: float)
+signal tick()
+signal collection_changed()
 signal game_won()
+signal form_unlocked(mid: int, form: int, card: Dictionary)
 
-# ===== CONFIG (from CardFactory.config) =====
-var MAX_TIER: int:
-	get: return CardFactory.config.max_tier
-var MAX_RANK: int:
-	get: return CardFactory.config.max_rank
-var STARTING_HAND_SIZE: int:
-	get: return CardFactory.config.starting_hand_size
-var STARTING_DECK_SIZE: int:
-	get: return CardFactory.config.starting_deck_size
-var BASE_DRAW_COOLDOWN: float:
-	get: return CardFactory.config.base_draw_cooldown
-var BASE_TICK_INTERVAL: float:
-	get: return CardFactory.config.base_tick_interval
-var PACK_SIZE: int:
-	get: return CardFactory.config.pack_size
-var PACK_BASE_COST: int:
-	get: return CardFactory.config.pack_base_cost
+# ===== CONSTANTS =====
+const MAX_RANK: int = 9          # Highest normal rank (R9)
+const MAX_CARD_RANK: int = 10    # MAX cards count as rank 10 for points
+const BASE_HAND_SIZE: int = 10
+const BASE_DRAW_COOLDOWN: float = 10.0
+const PACK_SIZE: int = 5
+const SAVE_PATH: String = "user://savegame.cfg"
+const SAVE_VERSION: int = 6  # Bumped for new card format
 
-# ===== CURRENCY =====
-var points: int = 0:
-	set(value):
-		points = value
-		points_changed.emit(points)
+# Tick timer
+var _tick_timer: Timer
 
-# ===== DECK & HAND =====
-var deck: Array[Dictionary] = []  # Array of {tier: int, rank: int}
-var discard_pile: Array[Dictionary] = []
-var hand: Array[Dictionary] = []  # Fixed size array, empty dict = empty slot
-
-# ===== PROGRESSION =====
-var current_tier: int = 1  # Highest unlocked booster tier
-var hand_size: int = 2
-var current_milestone_index: int = 0  # 0-39 (4 per tier × 10 tiers)
-var milestone_slots: Array[Dictionary] = [{}, {}, {}]  # 3 slots for milestone cards
-
-# ===== DRAW COOLDOWN =====
-var draw_cooldown_current: float = 0.0
-var can_draw: bool = true
-
-# ===== UNLOCK FLAGS =====
-var has_merged: bool = false
-var has_bought_pack: bool = false
-var deck_viewer_unlocked: bool = false
-var sell_unlocked: bool = false
-
-# ===== UPGRADES (All 4 always available from start) =====
-var upgrade_points_mod_level: int = 0
-var upgrade_pack_discount_level: int = 0
-var upgrade_critical_merge_level: int = 0
-var upgrade_lucky_pack_level: int = 0
-
-# Upgrade cap (increased by "Upgrade Limit" milestones)
-var upgrade_cap: int = 10  # Base cap, +10 per milestone
-
-# ===== TIER POWER BONUSES (from Tier Power milestones) =====
-# Draw cooldown divisor: T1=2, T5=4, T8=8
-var draw_cooldown_divisor: float = 1.0
-# Tick rate multiplier: T2=2, T6=4, T9=8
-var tick_rate_multiplier: float = 1.0
-# Deck scoring percent: T4=10%, T7=50%, T10=100%
-var deck_scoring_percent: float = 0.0
-# Auto-draw: unlocked at T3
-var auto_draw_unlocked: bool = false
-var auto_draw_enabled: bool = false
-# Hand bonus multiplier: T9=x2, T10=x20
-var hand_bonus_multiplier: float = 1.0
-
-# ===== INTERNAL =====
-var _tick_timer: float = 0.0
-var debug_tick_multiplier: float = 1.0
-
-func _ready() -> void:
-	_initialize_game()
-	load_game()
-
-func _initialize_game() -> void:
-	deck.clear()
-	var start_tier = CardFactory.config.starting_card_tier
-	var start_rank = CardFactory.config.starting_card_rank
-	for i in range(STARTING_DECK_SIZE):
-		deck.append({tier = start_tier, rank = start_rank})
-	
-	hand.clear()
-	for i in range(hand_size):
-		hand.append({})
-	
-	milestone_slots = [{}, {}, {}]
-
-func _process(delta: float) -> void:
-	# Draw cooldown
-	if not can_draw:
-		draw_cooldown_current -= delta
-		draw_cooldown_changed.emit(draw_cooldown_current, get_draw_cooldown())
-		if draw_cooldown_current <= 0:
-			can_draw = true
-			draw_cooldown_current = 0.0
-			draw_cooldown_changed.emit(0.0, get_draw_cooldown())
-	
-	# Point generation tick
-	_tick_timer += delta
-	var tick_interval = get_tick_interval()
-	if _tick_timer >= tick_interval:
-		_tick_timer -= tick_interval
-		_on_tick()
-
-func _on_tick() -> void:
-	var point_rate = calculate_points_per_tick()
-	if point_rate > 0:
-		points += point_rate
-	tick.emit()
-
-# ===== COMPUTED VALUES (combining upgrades + tier power bonuses) =====
-
-## Draw cooldown: base / divisor (tier power)
-func get_draw_cooldown() -> float:
-	return maxf(CardFactory.config.min_draw_cooldown, BASE_DRAW_COOLDOWN / draw_cooldown_divisor)
-
-## Tick interval: base / multiplier (tier power) / debug multiplier
-func get_tick_interval() -> float:
-	var total_multiplier = tick_rate_multiplier * debug_tick_multiplier
-	return maxf(CardFactory.config.min_tick_interval, BASE_TICK_INTERVAL / total_multiplier)
-
-## Points multiplier from Points Mod upgrade
-func get_points_mod_multiplier() -> float:
-	return CardFactory.config.get_points_mod_multiplier(upgrade_points_mod_level)
-
-## Pack discount from Pack Discount upgrade
-func get_pack_discount_percent() -> float:
-	return CardFactory.config.get_pack_discount_percent(upgrade_pack_discount_level)
-
-## Critical merge chance from Critical Merge upgrade
-func get_critical_merge_chance() -> float:
-	return CardFactory.config.get_critical_merge_chance(upgrade_critical_merge_level)
-
-## Lucky pack chance from Lucky Pack upgrade
-func get_lucky_pack_chance() -> float:
-	return CardFactory.config.get_lucky_pack_chance(upgrade_lucky_pack_level)
-
-## Deck scoring bonus (tier power)
-func get_deck_scoring_bonus() -> int:
-	if deck_scoring_percent <= 0:
-		return 0
-	var total_value: int = 0
-	for card in deck:
-		total_value += get_card_points_value(card)
-	for card in discard_pile:
-		total_value += get_card_points_value(card)
-	return int(total_value * deck_scoring_percent)
-
-# ===== UPGRADE SYSTEM =====
-
-const UPGRADE_ORDER: Array[String] = ["points_mod", "pack_discount", "critical_merge", "lucky_pack"]
-
-const UPGRADE_NAMES: Dictionary = {
-	"points_mod": "Points Mod",
-	"pack_discount": "Pack Discount",
-	"critical_merge": "Critical Merge",
-	"lucky_pack": "Lucky Pack"
+# ===== ENUMS =====
+enum UpgradeType {
+	POINTS_MULT,
+	DRAW_SPEED,
+	PACK_DISCOUNT,
+	CRITICAL_MERGE,
+	MIN_RANK,
+	MAX_RANK
 }
 
-func _get_upgrade_level(upgrade_id: String) -> int:
-	match upgrade_id:
-		"points_mod": return upgrade_points_mod_level
-		"pack_discount": return upgrade_pack_discount_level
-		"critical_merge": return upgrade_critical_merge_level
-		"lucky_pack": return upgrade_lucky_pack_level
-	return 0
+enum MergeResult {
+	SUCCESS,
+	INVALID_EMPTY,
+	INVALID_DIFFERENT,
+	INVALID_MAX,
+	INVALID_RANK,
+	INVALID_FORM
+}
 
-func _set_upgrade_level(upgrade_id: String, value: int) -> void:
-	match upgrade_id:
-		"points_mod": upgrade_points_mod_level = value
-		"pack_discount": upgrade_pack_discount_level = value
-		"critical_merge": upgrade_critical_merge_level = value
-		"lucky_pack": upgrade_lucky_pack_level = value
+# ===== GAME STATE =====
+var points: int = 0
+var deck: Array[Dictionary] = []
+var discard_pile: Array[Dictionary] = []
+var hand: Array[Dictionary] = []
+var upgrade_levels: Dictionary = {}
 
-func _get_upgrade_name(upgrade_id: String) -> String:
-	return UPGRADE_NAMES.get(upgrade_id, upgrade_id)
+# Collection tracking
+var unlocked_forms: Dictionary = {}   # {mid: highest_unlocked_form} - what can drop from packs
+var submitted_forms: Dictionary = {}  # {mid: [form_indices]} - completed forms
+var submit_slot: Dictionary = {}      # Card in submit slot
+var packs_purchased: int = 0          # Track for first free pack
 
-func get_upgrade_cost(upgrade_id: String) -> int:
-	var level = _get_upgrade_level(upgrade_id)
-	return CardFactory.config.get_upgrade_cost(upgrade_id, level)
+# Draw cooldown
+var can_draw: bool = true
+var _draw_cooldown_remaining: float = 0.0
+var _current_draw_cooldown: float = BASE_DRAW_COOLDOWN
 
-func is_upgrade_at_cap(upgrade_id: String) -> bool:
-	return _get_upgrade_level(upgrade_id) >= upgrade_cap
+# Computed property for grid compatibility
+var hand_size: int:
+	get: return hand.size()
 
-func can_purchase_upgrade(upgrade_id: String) -> bool:
-	if is_upgrade_at_cap(upgrade_id):
-		return false
-	return points >= get_upgrade_cost(upgrade_id)
+# ===== INITIALIZATION =====
+func _ready() -> void:
+	_init_upgrades()
+	_setup_tick_timer()
+	if not load_game():
+		_init_new_game()
 
-func try_purchase_upgrade(upgrade_id: String) -> bool:
-	if not can_purchase_upgrade(upgrade_id):
-		return false
+func _setup_tick_timer() -> void:
+	_tick_timer = Timer.new()
+	_tick_timer.wait_time = 1.0
+	_tick_timer.autostart = true
+	_tick_timer.timeout.connect(_on_tick_timer_timeout)
+	add_child(_tick_timer)
+
+func _init_upgrades() -> void:
+	for type in UpgradeType.values():
+		upgrade_levels[type] = 0
+
+func _init_new_game() -> void:
+	points = 0
+	deck.clear()
+	discard_pile.clear()
+	hand.clear()
+	unlocked_forms.clear()
+	submitted_forms.clear()
+	submit_slot = {}
+	packs_purchased = 0
 	
-	var cost = get_upgrade_cost(upgrade_id)
-	points -= cost
-	_set_upgrade_level(upgrade_id, _get_upgrade_level(upgrade_id) + 1)
+	# Initialize unlocked forms: all species start with form 1 unlocked
+	for mid in MonsterRegistry.get_all_mids():
+		unlocked_forms[mid] = 1
 	
-	var level = _get_upgrade_level(upgrade_id)
-	var value_str = get_upgrade_value_display(upgrade_id)
+	# Initialize hand with empty slots
+	var starting_hand_size = get_current_hand_size()
+	for i in range(starting_hand_size):
+		hand.append({})
 	
-	log_event("Upgraded %s to level %d (%s)" % [_get_upgrade_name(upgrade_id), level, value_str])
-	upgrades_changed.emit()
-	return true
+	deck_changed.emit()
+	hand_changed.emit()
+	collection_changed.emit()
 
-func get_upgrade_value_display(upgrade_id: String) -> String:
-	match upgrade_id:
-		"points_mod":
-			return "%.1fx" % get_points_mod_multiplier()
-		"pack_discount":
-			return "%d%%" % int(get_pack_discount_percent() * 100)
-		"critical_merge":
-			return "%d%%" % int(get_critical_merge_chance() * 100)
-		"lucky_pack":
-			return "%d%%" % int(get_lucky_pack_chance() * 100)
-	return ""
+func _process(delta: float) -> void:
+	# Handle draw cooldown
+	if not can_draw:
+		_draw_cooldown_remaining -= delta
+		draw_cooldown_changed.emit(_draw_cooldown_remaining, _current_draw_cooldown)
+		if _draw_cooldown_remaining <= 0:
+			can_draw = true
+			_draw_cooldown_remaining = 0
 
-func get_upgrade_next_value_display(upgrade_id: String) -> String:
-	var next_level = _get_upgrade_level(upgrade_id) + 1
-	match upgrade_id:
-		"points_mod":
-			return "%.1fx" % CardFactory.config.get_points_mod_multiplier(next_level)
-		"pack_discount":
-			return "%d%%" % int(CardFactory.config.get_pack_discount_percent(next_level) * 100)
-		"critical_merge":
-			return "%d%%" % int(CardFactory.config.get_critical_merge_chance(next_level) * 100)
-		"lucky_pack":
-			return "%d%%" % int(CardFactory.config.get_lucky_pack_chance(next_level) * 100)
-	return ""
+func _on_tick_timer_timeout() -> void:
+	var pts = calculate_points_per_tick()
+	if pts > 0:
+		add_points(pts)
+	tick.emit()
 
-# ===== POINT FORMULAS =====
+# ===== HAND SIZE =====
+func get_current_hand_size() -> int:
+	return BASE_HAND_SIZE
+
+func _resize_hand(new_size: int) -> void:
+	while hand.size() < new_size:
+		hand.append({})
+	hand_changed.emit()
+
+# ===== POINTS =====
+func add_points(amount: int) -> void:
+	points += amount
+	points_changed.emit(points)
+
+func spend_points(amount: int) -> bool:
+	if points >= amount:
+		points -= amount
+		points_changed.emit(points)
+		return true
+	return false
 
 func calculate_points_per_tick() -> int:
-	var base_total: int = 0
+	var total = 0
 	for card in hand:
-		if not card.is_empty():
-			base_total += get_card_points_value(card)
+		if CardFactory.is_valid_card(card):
+			total += CardFactory.get_card_points_value(card)
 	
-	# Apply points mod multiplier (upgrade)
-	var multiplied = int(base_total * get_points_mod_multiplier())
+	# Apply points multiplier
+	var mult_level = upgrade_levels.get(UpgradeType.POINTS_MULT, 0)
+	if mult_level > 0:
+		total *= int(pow(2, mult_level))
 	
-	# Apply hand bonus multiplier (tier 9-10 milestone reward)
-	multiplied = int(multiplied * hand_bonus_multiplier)
-	
-	# Apply tick rate multiplier (tier power) - more ticks = more points
-	multiplied = int(multiplied * tick_rate_multiplier)
-	
-	# Add deck scoring bonus (tier power)
-	multiplied += get_deck_scoring_bonus()
-	
-	return multiplied
+	return total
 
-func get_card_points_value(card: Dictionary) -> int:
-	if card.is_empty():
-		return 0
-	return CardFactory.config.get_card_points_value(card.tier, card.rank)
-
-func get_pack_cost() -> int:
-	var base_cost = PACK_BASE_COST * current_tier
-	var discount = get_pack_discount_percent()
-	return maxi(0, int(base_cost * (1.0 - discount)))
-
-func get_sell_value(card: Dictionary) -> int:
-	if card.is_empty():
-		return 0
-	return CardFactory.config.get_sell_value(card.tier, card.rank)
-
-# ===== AUTO-DRAW =====
-
-func toggle_auto_draw() -> void:
-	if not auto_draw_unlocked:
-		return
-	auto_draw_enabled = not auto_draw_enabled
-	if auto_draw_enabled:
-		log_event("Auto-draw enabled")
-	else:
-		log_event("Auto-draw disabled")
-
-# ===== LOGGING =====
-
-func log_event(message: String) -> void:
-	event_logged.emit(message)
-
-# ===== DECK OPERATIONS =====
-
-func draw_card() -> Dictionary:
+# ===== DECK & DRAW =====
+func draw_card() -> void:
 	if not can_draw:
-		return {}
+		return
+	
+	# Shuffle discard into deck if needed
+	if deck.is_empty() and not discard_pile.is_empty():
+		deck = discard_pile.duplicate()
+		discard_pile.clear()
+		deck.shuffle()
+		deck_changed.emit()
+		discard_changed.emit()
 	
 	if deck.is_empty():
-		if discard_pile.is_empty():
-			return {}
-		_shuffle_discard_into_deck()
+		return
 	
-	var card = deck.pop_front()
+	var card = deck.pop_back()
 	discard_pile.push_front(card)
 	
+	# Start cooldown
 	can_draw = false
-	draw_cooldown_current = get_draw_cooldown()
+	_current_draw_cooldown = get_draw_cooldown()
+	_draw_cooldown_remaining = _current_draw_cooldown
 	
 	deck_changed.emit()
 	discard_changed.emit()
-	log_event("Drew %s" % card_to_string(card))
+
+func get_draw_cooldown() -> float:
+	var level = upgrade_levels.get(UpgradeType.DRAW_SPEED, 0)
+	var cooldowns = [10.0, 5.0, 2.5, 1.25, 0.5]
+	return cooldowns[mini(level, cooldowns.size() - 1)]
+
+# ===== HAND MANAGEMENT =====
+func get_hand_slot(index: int) -> Dictionary:
+	if index < 0 or index >= hand.size():
+		return {}
+	return hand[index]
+
+func set_hand_slot(index: int, card: Dictionary) -> void:
+	if index >= 0 and index < hand.size():
+		hand[index] = card
+		hand_changed.emit()
+
+func is_hand_slot_empty(index: int) -> bool:
+	return CardFactory.is_empty_card(get_hand_slot(index))
+
+func place_card_in_hand(card: Dictionary, slot_index: int) -> bool:
+	if slot_index < 0 or slot_index >= hand.size():
+		return false
+	if not is_hand_slot_empty(slot_index):
+		return false
+	
+	hand[slot_index] = card
+	hand_changed.emit()
+	return true
+
+func remove_card_from_hand(slot_index: int) -> Dictionary:
+	if slot_index < 0 or slot_index >= hand.size():
+		return {}
+	var card = hand[slot_index]
+	hand[slot_index] = {}
+	hand_changed.emit()
 	return card
 
-func _shuffle_discard_into_deck() -> void:
-	deck.append_array(discard_pile)
-	discard_pile.clear()
-	deck.shuffle()
-	log_event("Shuffled discard pile into deck")
-	deck_changed.emit()
-	discard_changed.emit()
-
-func peek_discard() -> Dictionary:
+# ===== DISCARD PILE =====
+func get_top_discard() -> Dictionary:
 	if discard_pile.is_empty():
 		return {}
 	return discard_pile[0]
@@ -344,594 +236,436 @@ func take_from_discard() -> Dictionary:
 	return card
 
 func add_to_discard(card: Dictionary) -> void:
-	if card.is_empty():
-		return
-	discard_pile.push_front(card)
-	discard_changed.emit()
+	if CardFactory.is_valid_card(card):
+		discard_pile.push_front(card)
+		discard_changed.emit()
 
-# ===== HAND OPERATIONS =====
-
-func get_hand_slot(index: int) -> Dictionary:
-	if index < 0 or index >= hand.size():
-		return {}
-	return hand[index]
-
-func set_hand_slot(index: int, card: Dictionary) -> void:
-	if index < 0 or index >= hand.size():
-		return
-	hand[index] = card
-	hand_changed.emit()
-
-func clear_hand_slot(index: int) -> Dictionary:
-	if index < 0 or index >= hand.size():
-		return {}
-	var card = hand[index]
-	hand[index] = {}
-	hand_changed.emit()
-	return card
-
-func swap_hand_slots(index_a: int, index_b: int) -> void:
-	if index_a < 0 or index_a >= hand.size():
-		return
-	if index_b < 0 or index_b >= hand.size():
-		return
-	var temp = hand[index_a]
-	hand[index_a] = hand[index_b]
-	hand[index_b] = temp
-	hand_changed.emit()
-
-func expand_hand(new_size: int) -> void:
-	while hand.size() < new_size:
-		hand.append({})
-	hand_size = new_size
-	hand_changed.emit()
-
-func discard_from_hand(slot_index: int) -> void:
-	if slot_index < 0 or slot_index >= hand.size():
-		return
-	var card = hand[slot_index]
-	if card.is_empty():
-		return
-	hand[slot_index] = {}
-	discard_pile.push_front(card)
-	hand_changed.emit()
-	discard_changed.emit()
-	log_event("Discarded %s" % card_to_string(card))
-
-# ===== MERGING =====
-
-enum MergeResult { SUCCESS, INVALID_EMPTY, INVALID_TIER, INVALID_RANK, INVALID_MAX_RANK }
-
-func can_merge(card_a: Dictionary, card_b: Dictionary) -> bool:
-	return validate_merge(card_a, card_b) == MergeResult.SUCCESS
-
+# ===== MERGING (SIMPLIFIED) =====
 func validate_merge(card_a: Dictionary, card_b: Dictionary) -> MergeResult:
-	if card_a.is_empty() or card_b.is_empty():
+	if CardFactory.is_empty_card(card_a) or CardFactory.is_empty_card(card_b):
 		return MergeResult.INVALID_EMPTY
-	if card_a.tier != card_b.tier:
-		return MergeResult.INVALID_TIER
+	if card_a.is_max or card_b.is_max:
+		return MergeResult.INVALID_MAX
+	if card_a.mid != card_b.mid:
+		return MergeResult.INVALID_DIFFERENT
+	if card_a.form != card_b.form:
+		return MergeResult.INVALID_FORM
 	if card_a.rank != card_b.rank:
 		return MergeResult.INVALID_RANK
-	if card_a.rank >= MAX_RANK:
-		return MergeResult.INVALID_MAX_RANK
 	return MergeResult.SUCCESS
 
 func merge_cards(card_a: Dictionary, card_b: Dictionary) -> Dictionary:
-	if not can_merge(card_a, card_b):
+	var result = validate_merge(card_a, card_b)
+	if result != MergeResult.SUCCESS:
 		return {}
 	
-	if not has_merged:
-		has_merged = true
+	var mid = card_a.mid
+	var form = card_a.form
+	var rank = card_a.rank
+	
+	# R9 + R9 = MAX (no rank increase, just becomes MAX)
+	if rank == MAX_RANK:
+		return CardFactory.create_max_card(mid, form)
 	
 	# Check for critical merge (+2 ranks instead of +1)
-	var rank_bonus = 1
-	var critical_chance = get_critical_merge_chance()
-	if critical_chance > 0 and randf() < critical_chance:
-		# Critical merge! But can't exceed max rank
-		if card_a.rank + 2 <= MAX_RANK:
-			rank_bonus = 2
-			log_event("CRITICAL MERGE!")
+	var crit_level = upgrade_levels.get(UpgradeType.CRITICAL_MERGE, 0)
+	var crit_chance = crit_level * 0.1  # 10% per level
+	var is_critical = randf() < crit_chance
+	var rank_increase = 2 if is_critical else 1
 	
-	var result = {tier = card_a.tier, rank = mini(card_a.rank + rank_bonus, MAX_RANK)}
-	log_event("Merged %s + %s -> %s" % [card_to_string(card_a), card_to_string(card_b), card_to_string(result)])
-	return result
+	var new_rank = mini(rank + rank_increase, MAX_RANK)
+	
+	return CardFactory.create_card(mid, form, new_rank)
 
-func try_merge_hand_slots(source_index: int, target_index: int) -> bool:
-	var source_card = get_hand_slot(source_index)
-	var target_card = get_hand_slot(target_index)
-	
-	if not can_merge(source_card, target_card):
-		return false
-	
-	var result = merge_cards(source_card, target_card)
-	hand[source_index] = {}
-	hand[target_index] = result
-	hand_changed.emit()
-	return true
-
-func try_move_hand_slots(source_index: int, target_index: int) -> bool:
-	var source_card = get_hand_slot(source_index)
-	var target_card = get_hand_slot(target_index)
-	
-	if source_card.is_empty():
-		return false
-	if not target_card.is_empty():
-		return false
-	
-	hand[target_index] = source_card
-	hand[source_index] = {}
-	hand_changed.emit()
-	return true
+func get_merge_failure_reason(result: MergeResult) -> String:
+	match result:
+		MergeResult.INVALID_EMPTY:
+			return "Cannot merge with empty slot"
+		MergeResult.INVALID_DIFFERENT:
+			return "Cards must be same species"
+		MergeResult.INVALID_FORM:
+			return "Cards must be same form"
+		MergeResult.INVALID_MAX:
+			return "Cannot merge MAX cards"
+		MergeResult.INVALID_RANK:
+			return "Cards must be same rank"
+		_:
+			return "Unknown error"
 
 # ===== BOOSTER PACKS =====
+func get_pack_cost() -> int:
+	# Cost = total card value * 10 (0 cards = free)
+	var card_value = _get_total_card_value()
+	
+	# Apply discount from upgrades
+	var discount_level = upgrade_levels.get(UpgradeType.PACK_DISCOUNT, 0)
+	var cost = card_value * 10
+	for i in range(discount_level):
+		cost = cost / 2.0
+	cost = int(cost)
+	
+	return cost
 
-func can_afford_pack() -> bool:
+func _get_total_card_value() -> int:
+	var total = 0
+	for card in deck:
+		total += CardFactory.get_card_points_value(card)
+	for card in discard_pile:
+		total += CardFactory.get_card_points_value(card)
+	for card in hand:
+		if CardFactory.is_valid_card(card):
+			total += CardFactory.get_card_points_value(card)
+	return total
+
+func can_buy_pack() -> bool:
 	return points >= get_pack_cost()
 
 func buy_pack() -> Array[Dictionary]:
-	if not can_afford_pack():
+	var cost = get_pack_cost()
+	if cost > 0 and not spend_points(cost):
 		return []
 	
-	var cost = get_pack_cost()
-	points -= cost
+	packs_purchased += 1
+	var pack = _generate_pack()
 	
-	var cards = _generate_pack(current_tier)
-	
-	for card in cards:
+	# Add cards to deck
+	for card in pack:
 		deck.append(card)
+	
 	deck.shuffle()
-	
-	if not has_bought_pack:
-		has_bought_pack = true
-	
-	log_event("Bought T%s pack for %d pts" % [CardFactory.get_tier_numeral(current_tier), cost])
 	deck_changed.emit()
 	
-	return cards
+	return pack
 
-func _generate_pack(tier: int) -> Array[Dictionary]:
-	var cards: Array[Dictionary] = []
-	var lucky_triggered = false
+func _generate_pack() -> Array[Dictionary]:
+	var pack: Array[Dictionary] = []
 	
-	# Check for lucky pack on final slot
-	var lucky_chance = get_lucky_pack_chance()
-	if lucky_chance > 0 and randf() < lucky_chance:
-		lucky_triggered = true
+	# Get available forms (unlocked but not submitted)
+	var available: Array[Dictionary] = []  # [{mid, form}, ...]
+	for mid in unlocked_forms.keys():
+		var unlocked_form = unlocked_forms[mid]
+		var submitted = submitted_forms.get(mid, [])
+		if unlocked_form not in submitted:
+			available.append({mid = mid, form = unlocked_form})
+	
+	if available.is_empty():
+		return pack
+	
+	# Get min/max rank from upgrades
+	var min_rank_level = upgrade_levels.get(UpgradeType.MIN_RANK, 0)
+	var max_rank_level = upgrade_levels.get(UpgradeType.MAX_RANK, 0)
+	var min_rank = 1 + min_rank_level  # 1-5
+	var max_rank = 5 + max_rank_level  # 5-9
 	
 	for i in range(PACK_SIZE):
-		var min_rank = 1
-		var max_rank_roll = MAX_RANK - 1  # R10 cannot drop normally
+		var choice = available[randi() % available.size()]
+		var rank = _roll_rank(min_rank, max_rank)
 		
-		# Pity system
-		if i == 2:  # Card 3 (index 2): R2+
-			min_rank = CardFactory.config.pack_pity_slot_3_min_rank
-		elif i == 4:  # Card 5 (index 4): R3+ or R9 if lucky
-			if lucky_triggered:
-				cards.append({tier = tier, rank = 9})
-				log_event("Lucky Pack triggered! R9 guaranteed!")
-				continue
-			min_rank = CardFactory.config.pack_pity_slot_5_min_rank
+		# Pity system for later slots
+		if i == 2:  # Slot 3
+			rank = maxi(rank, min_rank + 1)
+		elif i == 4:  # Slot 5
+			rank = maxi(rank, min_rank + 2)
 		
-		var rank = _roll_rank(min_rank, max_rank_roll)
-		cards.append({tier = tier, rank = rank})
+		rank = clampi(rank, min_rank, max_rank)
+		pack.append(CardFactory.create_card(choice.mid, choice.form, rank))
 	
-	return cards
+	return pack
 
-func _roll_rank(min_rank: int, max_rank: int = 9) -> int:
+func _roll_rank(min_r: int, max_r: int) -> int:
+	## Roll a rank weighted toward lower values within range
+	var range_size = max_r - min_r + 1
+	if range_size <= 1:
+		return min_r
+	
+	# Weighted roll favoring lower ranks
 	var roll = randf()
-	var cumulative = 0.0
-	var probability = CardFactory.config.pack_rank_probability_decay
-	
-	for rank in range(1, max_rank + 1):
-		cumulative += probability
-		if roll < cumulative:
-			return maxi(rank, min_rank)
-		probability *= CardFactory.config.pack_rank_probability_decay
-	
-	return maxi(max_rank, min_rank)
+	if roll < 0.5:
+		return min_r
+	elif roll < 0.75:
+		return mini(min_r + 1, max_r)
+	elif roll < 0.9:
+		return clampi(min_r + randi_range(1, 2), min_r, max_r)
+	else:
+		return clampi(min_r + randi_range(2, range_size - 1), min_r, max_r)
 
-# ===== MILESTONES =====
-# 4 milestones per tier × 10 tiers = 40 total
-# Milestone 1: Hand Size (R1 + R2 + R3) - +1 slot T1-T8, Hand Bonus x2 T9, Hand Bonus x10 T10
-# Milestone 2: Tier Power (R4 + R5 + R6) - unique per tier
-# Milestone 3: Upgrade Limit (R7 + R8 + R9)
-# Milestone 4: Booster Tier (R10 + R10 + R10)
+# ===== COLLECTION & SUBMISSION =====
+func is_form_unlocked(mid: int, form: int) -> bool:
+	return unlocked_forms.get(mid, 0) >= form
 
-const MAX_HAND_SIZE: int = 10
+func is_form_submitted(mid: int, form: int) -> bool:
+	return form in submitted_forms.get(mid, [])
 
-func get_current_milestone() -> Dictionary:
-	if current_milestone_index >= 40:
-		return {}  # Game complete
-	
-	@warning_ignore("integer_division")
-	var tier = (current_milestone_index / 4) + 1
-	var type_index = current_milestone_index % 4
-	
-	var type: String
-	var required: Array[Dictionary] = []
-	var reward_text: String
-	
-	match type_index:
-		0:  # Hand Size: R1, R2, R3
-			type = "hand_size"
-			required = [
-				{tier = tier, rank = 1},
-				{tier = tier, rank = 2},
-				{tier = tier, rank = 3}
-			]
-			# T1-T8: +1 hand slot, T9: Hand Bonus x2, T10: Hand Bonus x10
-			if tier == 10:
-				reward_text = "Hand Bonus x10"
-			elif tier == 9:
-				reward_text = "Hand Bonus x2"
-			else:
-				reward_text = "+1 hand slot"
-		
-		1:  # Tier Power: R4, R5, R6
-			type = "tier_power"
-			required = [
-				{tier = tier, rank = 4},
-				{tier = tier, rank = 5},
-				{tier = tier, rank = 6}
-			]
-			reward_text = _get_tier_power_reward_text(tier)
-		
-		2:  # Upgrade Limit: R7, R8, R9
-			type = "upgrade_limit"
-			required = [
-				{tier = tier, rank = 7},
-				{tier = tier, rank = 8},
-				{tier = tier, rank = 9}
-			]
-			reward_text = "+10 upgrade cap"
-		
-		3:  # Booster Tier: R10, R10, R10
-			type = "booster_tier"
-			required = [
-				{tier = tier, rank = 10},
-				{tier = tier, rank = 10},
-				{tier = tier, rank = 10}
-			]
-			if tier == MAX_TIER:
-				reward_text = "WIN THE GAME!"
-			else:
-				reward_text = "Unlock T%s packs" % CardFactory.get_tier_numeral(tier + 1)
-	
-	return {
-		index = current_milestone_index,
-		tier = tier,
-		type = type,
-		type_index = type_index,
-		required_cards = required,
-		reward_text = reward_text,
-		is_final = (current_milestone_index == 39)
-	}
+func get_unlocked_form(mid: int) -> int:
+	return unlocked_forms.get(mid, 1)
 
-func _get_tier_power_reward_text(tier: int) -> String:
-	match tier:
-		1: return "Draw Speed x2"
-		2: return "Tick Rate x2"
-		3: return "Auto-Draw Unlocked"
-		4: return "Deck Scoring: 10%"
-		5: return "Draw Speed x2"
-		6: return "Tick Rate x2"
-		7: return "Deck Scoring: 50%"
-		8: return "Draw Speed x2"
-		9: return "Tick Rate x2"
-		10: return "Deck Scoring: 100%"
-	return ""
+func get_submitted_form_count() -> int:
+	var total = 0
+	for mid in submitted_forms.keys():
+		total += submitted_forms[mid].size()
+	return total
 
-func get_milestone_slot(index: int) -> Dictionary:
-	if index < 0 or index >= milestone_slots.size():
-		return {}
-	return milestone_slots[index]
+func set_submit_slot(card: Dictionary) -> void:
+	submit_slot = card
+	collection_changed.emit()
 
-func card_matches_milestone_slot(card: Dictionary, slot_index: int) -> bool:
-	var milestone = get_current_milestone()
-	if milestone.is_empty():
-		return false
-	if slot_index < 0 or slot_index >= milestone.required_cards.size():
-		return false
-	
-	var required = milestone.required_cards[slot_index]
-	return card.tier == required.tier and card.rank == required.rank
+func get_submit_slot() -> Dictionary:
+	return submit_slot
 
-func slot_card_in_milestone(card: Dictionary, slot_index: int) -> bool:
-	if not card_matches_milestone_slot(card, slot_index):
-		return false
-	if not milestone_slots[slot_index].is_empty():
-		return false
-	
-	milestone_slots[slot_index] = card
-	milestone_changed.emit()
-	return true
-
-func clear_milestone_slot(slot_index: int) -> void:
-	if slot_index < 0 or slot_index >= milestone_slots.size():
-		return
-	milestone_slots[slot_index] = {}
-	milestone_changed.emit()
-
-func remove_card_from_milestone(slot_index: int) -> Dictionary:
-	if slot_index < 0 or slot_index >= milestone_slots.size():
-		return {}
-	
-	var card = milestone_slots[slot_index]
-	milestone_slots[slot_index] = {}
-	milestone_changed.emit()
+func clear_submit_slot() -> Dictionary:
+	var card = submit_slot
+	submit_slot = {}
+	collection_changed.emit()
 	return card
 
-func can_complete_milestone() -> bool:
-	var milestone = get_current_milestone()
-	if milestone.is_empty():
+func can_submit() -> bool:
+	if not CardFactory.is_valid_card(submit_slot):
 		return false
-	
-	for i in range(milestone.required_cards.size()):
-		if milestone_slots[i].is_empty():
-			return false
-	
-	return true
+	if not submit_slot.is_max:
+		return false
+	# Form not already submitted
+	var mid = submit_slot.mid
+	var form = submit_slot.form
+	return not is_form_submitted(mid, form)
 
-func complete_milestone() -> bool:
-	if not can_complete_milestone():
+func get_submit_warning() -> String:
+	if not CardFactory.is_valid_card(submit_slot):
+		return ""
+	var card_name = CardFactory.get_card_name(submit_slot)
+	return "Submitting will remove all %s cards from your game. This cannot be undone!" % card_name
+
+func confirm_submission() -> bool:
+	if not can_submit():
 		return false
 	
-	var milestone = get_current_milestone()
+	var mid = submit_slot.mid
+	var form = submit_slot.form
+	var is_final = CardFactory.is_final_form(submit_slot)
 	
-	# Apply reward
-	match milestone.type:
-		"hand_size":
-			_apply_hand_size_reward(milestone.tier)
-		"tier_power":
-			_apply_tier_power_reward(milestone.tier)
-		"upgrade_limit":
-			_apply_upgrade_limit_reward()
-		"booster_tier":
-			_apply_booster_tier_reward(milestone.tier)
+	# Mark form as submitted
+	if mid not in submitted_forms:
+		submitted_forms[mid] = []
+	submitted_forms[mid].append(form)
 	
-	# Clear milestone slots (cards are consumed)
-	milestone_slots = [{}, {}, {}]
+	# Remove all cards of this form from game
+	_remove_form_from_game(mid, form)
 	
-	# Check for win
-	if milestone.is_final:
-		log_event("CONGRATULATIONS! You've completed Card Combiner!")
+	# Clear submit slot
+	submit_slot = {}
+	
+	# Unlock next form if not final
+	var unlocked_card: Dictionary = {}
+	if not is_final:
+		var next_form = form + 1
+		unlocked_forms[mid] = next_form
+		unlocked_card = CardFactory.create_card(mid, next_form, 1)
+		deck.append(unlocked_card)
+		deck.shuffle()
+		deck_changed.emit()
+		
+		form_unlocked.emit(mid, next_form, unlocked_card)
+	
+	collection_changed.emit()
+	
+	# Check win condition - all forms across all species submitted
+	if get_submitted_form_count() >= MonsterRegistry.get_total_form_count():
 		game_won.emit()
-	else:
-		current_milestone_index += 1
-		log_event("Milestone complete! %s" % milestone.reward_text)
 	
-	milestone_changed.emit()
 	return true
 
-func _apply_hand_size_reward(tier: int) -> void:
-	if hand_size < MAX_HAND_SIZE:
-		# Tiers 1-8: +1 hand slot each (max 10)
-		var old_size = hand_size
-		expand_hand(hand_size + 1)
-		log_event("Hand size: %d -> %d" % [old_size, hand_size])
-	elif tier == 9:
-		# Tier 9: Hand Bonus x2
-		hand_bonus_multiplier = 2.0
-		log_event("Hand Bonus x2!")
-		upgrades_changed.emit()
-	elif tier == 10:
-		# Tier 10: Hand Bonus x10 (stacks: 2 * 10 = 20)
-		hand_bonus_multiplier = 20.0
-		log_event("Hand Bonus x10! (x20 total)")
-		upgrades_changed.emit()
-
-func _apply_tier_power_reward(tier: int) -> void:
-	match tier:
-		1:  # Draw Speed x2 (10s -> 5s)
-			draw_cooldown_divisor = 2.0
-			log_event("Draw speed doubled! (%.1fs)" % get_draw_cooldown())
-		2:  # Tick Rate x2
-			tick_rate_multiplier = 2.0
-			log_event("Tick rate doubled!")
-		3:  # Auto-Draw Unlocked
-			auto_draw_unlocked = true
-			log_event("Auto-draw unlocked! Toggle in Settings.")
-		4:  # Deck Scoring 10%
-			deck_scoring_percent = 0.10
-			log_event("Deck scoring: 10%% bonus!")
-		5:  # Draw Speed x2 (5s -> 2.5s)
-			draw_cooldown_divisor = 4.0
-			log_event("Draw speed doubled! (%.1fs)" % get_draw_cooldown())
-		6:  # Tick Rate x2
-			tick_rate_multiplier = 4.0
-			log_event("Tick rate doubled!")
-		7:  # Deck Scoring 50%
-			deck_scoring_percent = 0.50
-			log_event("Deck scoring: 50%% bonus!")
-		8:  # Draw Speed x2 (2.5s -> 1.25s)
-			draw_cooldown_divisor = 8.0
-			log_event("Draw speed doubled! (%.1fs)" % get_draw_cooldown())
-		9:  # Tick Rate x2
-			tick_rate_multiplier = 8.0
-			log_event("Tick rate doubled!")
-		10:  # Deck Scoring 100%
-			deck_scoring_percent = 1.0
-			log_event("Deck scoring: 100%% bonus!")
-	
-	upgrades_changed.emit()
-
-func _apply_upgrade_limit_reward() -> void:
-	upgrade_cap += CardFactory.config.upgrade_cap_increment
-	log_event("Upgrade cap increased to %d!" % upgrade_cap)
-	upgrades_changed.emit()
-
-func _apply_booster_tier_reward(tier: int) -> void:
-	current_tier += 1
-	
-	# Unlock deck viewer and sell after T2
-	if current_tier == 2:
-		deck_viewer_unlocked = true
-		sell_unlocked = true
-		log_event("Collection viewer and selling unlocked!")
-	
-	if current_tier <= MAX_TIER:
-		log_event("T%s packs unlocked!" % CardFactory.get_tier_numeral(current_tier))
-
-# ===== SELL =====
-
-func sell_card_from_deck(deck_index: int) -> int:
-	if not sell_unlocked:
-		return 0
-	if deck_index < 0 or deck_index >= deck.size():
-		return 0
-	
-	var card = deck[deck_index]
-	var value = get_sell_value(card)
-	
-	deck.remove_at(deck_index)
-	points += value
-	
-	log_event("Sold %s for %d pts" % [card_to_string(card), value])
+func _remove_form_from_game(mid: int, form: int) -> void:
+	## Remove all cards of specific mid+form from deck, discard, hand
+	deck = deck.filter(func(c): return c.get("mid", -1) != mid or c.get("form", -1) != form)
+	discard_pile = discard_pile.filter(func(c): return c.get("mid", -1) != mid or c.get("form", -1) != form)
+	for i in range(hand.size()):
+		var card = hand[i]
+		if card.get("mid", -1) == mid and card.get("form", -1) == form:
+			hand[i] = {}
 	deck_changed.emit()
-	return value
+	discard_changed.emit()
+	hand_changed.emit()
 
-# ===== UTILITIES =====
+# ===== UPGRADES =====
+func get_upgrade_level(type: UpgradeType) -> int:
+	return upgrade_levels.get(type, 0)
 
-func card_to_string(card: Dictionary) -> String:
-	return CardFactory.card_to_string(card)
+func get_upgrade_cost(type: UpgradeType) -> int:
+	var level = get_upgrade_level(type)
+	
+	match type:
+		UpgradeType.POINTS_MULT:
+			return int(100 * pow(10, level))
+		UpgradeType.DRAW_SPEED:
+			if level >= 4: return -1
+			return int(100 * pow(10, level))
+		UpgradeType.PACK_DISCOUNT:
+			return int(1000 * pow(10, level))
+		UpgradeType.CRITICAL_MERGE:
+			if level >= 5: return -1
+			return int(10000 * pow(10, level))
+		UpgradeType.MIN_RANK:
+			if level >= 4: return -1  # Max level 4 (min rank 5)
+			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B
+		UpgradeType.MAX_RANK:
+			if level >= 4: return -1  # Max level 4 (max rank 9)
+			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B
+	
+	return -1
 
-func get_total_deck_card_count() -> int:
-	return deck.size() + discard_pile.size()
+func can_buy_upgrade(type: UpgradeType) -> bool:
+	var cost = get_upgrade_cost(type)
+	if cost < 0:
+		return false
+	return points >= cost
 
-# ===== SAVE / LOAD =====
+func buy_upgrade(type: UpgradeType) -> bool:
+	var cost = get_upgrade_cost(type)
+	if cost < 0 or not spend_points(cost):
+		return false
+	
+	upgrade_levels[type] = get_upgrade_level(type) + 1
+	
+	# Min rank upgrade: bump all existing cards below new minimum
+	if type == UpgradeType.MIN_RANK:
+		_apply_min_rank_upgrade()
+	
+	return true
 
+func _apply_min_rank_upgrade() -> void:
+	## Upgrade all cards below the new minimum rank
+	var min_rank = 1 + upgrade_levels.get(UpgradeType.MIN_RANK, 0)
+	var upgraded_count = 0
+	
+	for i in range(deck.size()):
+		if CardFactory.is_valid_card(deck[i]) and not deck[i].is_max:
+			if deck[i].rank < min_rank:
+				deck[i].rank = min_rank
+				upgraded_count += 1
+	
+	for i in range(discard_pile.size()):
+		if CardFactory.is_valid_card(discard_pile[i]) and not discard_pile[i].is_max:
+			if discard_pile[i].rank < min_rank:
+				discard_pile[i].rank = min_rank
+				upgraded_count += 1
+	
+	for i in range(hand.size()):
+		if CardFactory.is_valid_card(hand[i]) and not hand[i].is_max:
+			if hand[i].rank < min_rank:
+				hand[i].rank = min_rank
+				upgraded_count += 1
+	
+	if upgraded_count > 0:
+		deck_changed.emit()
+		discard_changed.emit()
+		hand_changed.emit()
+
+func get_upgrade_name(type: UpgradeType) -> String:
+	match type:
+		UpgradeType.POINTS_MULT: return "Points x2"
+		UpgradeType.DRAW_SPEED: return "Draw Speed"
+		UpgradeType.PACK_DISCOUNT: return "Pack Discount"
+		UpgradeType.CRITICAL_MERGE: return "Critical Merge"
+		UpgradeType.MIN_RANK: return "Min Pack Rank"
+		UpgradeType.MAX_RANK: return "Max Pack Rank"
+	return "Unknown"
+
+func get_upgrade_description(type: UpgradeType) -> String:
+	var level = get_upgrade_level(type)
+	match type:
+		UpgradeType.POINTS_MULT:
+			var mult = int(pow(2, level))
+			var next_mult = int(pow(2, level + 1))
+			return "%dx -> %dx" % [mult, next_mult]
+		UpgradeType.DRAW_SPEED:
+			var speeds = [10.0, 5.0, 2.5, 1.25, 0.5]
+			var current = speeds[mini(level, 4)]
+			if level >= 4:
+				return "%.1fs (MAX)" % current
+			var next = speeds[mini(level + 1, 4)]
+			return "%.1fs -> %.1fs" % [current, next]
+		UpgradeType.PACK_DISCOUNT:
+			var discount = int(pow(2, level))
+			var next = int(pow(2, level + 1))
+			return "1/%d -> 1/%d cost" % [discount, next]
+		UpgradeType.CRITICAL_MERGE:
+			var chance = level * 10
+			if level >= 5:
+				return "%d%% (MAX)" % chance
+			return "%d%% -> %d%%" % [chance, chance + 10]
+		UpgradeType.MIN_RANK:
+			var current = 1 + level
+			if level >= 4:
+				return "R%d (MAX)" % current
+			return "R%d -> R%d floor" % [current, current + 1]
+		UpgradeType.MAX_RANK:
+			var current = 5 + level
+			if level >= 4:
+				return "R%d (MAX)" % current
+			return "R%d -> R%d ceiling" % [current, current + 1]
+	return ""
+
+# ===== SAVE/LOAD =====
 func save_game() -> void:
 	var config = ConfigFile.new()
-	
-	config.set_value("meta", "version", VERSION)
-	config.set_value("currency", "points", points)
-	
-	config.set_value("deck", "cards", deck)
-	config.set_value("deck", "discard", discard_pile)
-	config.set_value("deck", "hand", hand)
-	
-	config.set_value("progression", "current_tier", current_tier)
-	config.set_value("progression", "hand_size", hand_size)
-	config.set_value("progression", "current_milestone_index", current_milestone_index)
-	config.set_value("progression", "milestone_slots", milestone_slots)
-	
-	config.set_value("flags", "has_merged", has_merged)
-	config.set_value("flags", "has_bought_pack", has_bought_pack)
-	config.set_value("flags", "deck_viewer_unlocked", deck_viewer_unlocked)
-	config.set_value("flags", "sell_unlocked", sell_unlocked)
-	
-	config.set_value("upgrades", "points_mod_level", upgrade_points_mod_level)
-	config.set_value("upgrades", "pack_discount_level", upgrade_pack_discount_level)
-	config.set_value("upgrades", "critical_merge_level", upgrade_critical_merge_level)
-	config.set_value("upgrades", "lucky_pack_level", upgrade_lucky_pack_level)
-	config.set_value("upgrades", "upgrade_cap", upgrade_cap)
-	
-	config.set_value("tier_power", "draw_cooldown_divisor", draw_cooldown_divisor)
-	config.set_value("tier_power", "tick_rate_multiplier", tick_rate_multiplier)
-	config.set_value("tier_power", "deck_scoring_percent", deck_scoring_percent)
-	config.set_value("tier_power", "auto_draw_unlocked", auto_draw_unlocked)
-	config.set_value("tier_power", "auto_draw_enabled", auto_draw_enabled)
-	config.set_value("tier_power", "hand_bonus_multiplier", hand_bonus_multiplier)
-	
-	var err = config.save(SAVE_PATH)
-	if err == OK:
-		log_event("Game saved")
-	else:
-		log_event("Save failed: error %d" % err)
+	config.set_value("save", "version", SAVE_VERSION)
+	config.set_value("save", "points", points)
+	config.set_value("save", "deck", deck)
+	config.set_value("save", "discard_pile", discard_pile)
+	config.set_value("save", "hand", hand)
+	config.set_value("save", "upgrade_levels", upgrade_levels)
+	config.set_value("save", "unlocked_forms", unlocked_forms)
+	config.set_value("save", "submitted_forms", submitted_forms)
+	config.set_value("save", "packs_purchased", packs_purchased)
+	config.save(SAVE_PATH)
 
-func load_game() -> void:
+func load_game() -> bool:
 	var config = ConfigFile.new()
-	var err = config.load(SAVE_PATH)
+	if config.load(SAVE_PATH) != OK:
+		return false
 	
-	if err != OK:
-		log_event("Starting new game")
-		return
+	var version = config.get_value("save", "version", 0)
+	if version != SAVE_VERSION:
+		return false
 	
-	points = config.get_value("currency", "points", 0)
+	points = config.get_value("save", "points", 0)
+	deck = config.get_value("save", "deck", [])
+	discard_pile = config.get_value("save", "discard_pile", [])
+	hand = config.get_value("save", "hand", [])
+	upgrade_levels = config.get_value("save", "upgrade_levels", {})
+	unlocked_forms = config.get_value("save", "unlocked_forms", {})
+	submitted_forms = config.get_value("save", "submitted_forms", {})
+	packs_purchased = config.get_value("save", "packs_purchased", 0)
 	
-	var loaded_deck = config.get_value("deck", "cards", [])
-	deck.clear()
-	for card in loaded_deck:
-		deck.append(card)
-	
-	var loaded_discard = config.get_value("deck", "discard", [])
-	discard_pile.clear()
-	for card in loaded_discard:
-		discard_pile.append(card)
-	
-	var loaded_hand = config.get_value("deck", "hand", [])
-	hand.clear()
-	for card in loaded_hand:
-		hand.append(card)
-	
-	current_tier = config.get_value("progression", "current_tier", 1)
-	hand_size = config.get_value("progression", "hand_size", STARTING_HAND_SIZE)
-	current_milestone_index = config.get_value("progression", "current_milestone_index", 0)
-	
-	var loaded_milestone = config.get_value("progression", "milestone_slots", [{}, {}, {}])
-	milestone_slots.clear()
-	for slot in loaded_milestone:
-		milestone_slots.append(slot)
-	
-	has_merged = config.get_value("flags", "has_merged", false)
-	has_bought_pack = config.get_value("flags", "has_bought_pack", false)
-	deck_viewer_unlocked = config.get_value("flags", "deck_viewer_unlocked", false)
-	sell_unlocked = config.get_value("flags", "sell_unlocked", false)
-	
-	upgrade_points_mod_level = config.get_value("upgrades", "points_mod_level", 0)
-	upgrade_pack_discount_level = config.get_value("upgrades", "pack_discount_level", 0)
-	upgrade_critical_merge_level = config.get_value("upgrades", "critical_merge_level", 0)
-	upgrade_lucky_pack_level = config.get_value("upgrades", "lucky_pack_level", 0)
-	upgrade_cap = config.get_value("upgrades", "upgrade_cap", CardFactory.config.base_upgrade_cap)
-	
-	draw_cooldown_divisor = config.get_value("tier_power", "draw_cooldown_divisor", 1.0)
-	tick_rate_multiplier = config.get_value("tier_power", "tick_rate_multiplier", 1.0)
-	deck_scoring_percent = config.get_value("tier_power", "deck_scoring_percent", 0.0)
-	auto_draw_unlocked = config.get_value("tier_power", "auto_draw_unlocked", false)
-	auto_draw_enabled = config.get_value("tier_power", "auto_draw_enabled", false)
-	hand_bonus_multiplier = config.get_value("tier_power", "hand_bonus_multiplier", 1.0)
-	
-	# Ensure hand is correct size
-	while hand.size() < hand_size:
+	# Ensure hand has correct size
+	var target_size = get_current_hand_size()
+	while hand.size() < target_size:
 		hand.append({})
 	
-	log_event("Game loaded (v%s)" % VERSION)
+	points_changed.emit(points)
+	deck_changed.emit()
+	discard_changed.emit()
+	hand_changed.emit()
+	collection_changed.emit()
+	
+	return true
 
-func reset_to_defaults() -> void:
-	points = 0
+func reset_game() -> void:
+	var dir = DirAccess.open("user://")
+	if dir:
+		dir.remove(SAVE_PATH.get_file())
+	_init_upgrades()
+	_init_new_game()
+
+# ===== SOFTLOCK PREVENTION =====
+func check_softlock() -> void:
+	var total_cards = deck.size() + discard_pile.size()
+	for card in hand:
+		if CardFactory.is_valid_card(card):
+			total_cards += 1
 	
-	deck.clear()
-	var start_tier = CardFactory.config.starting_card_tier
-	var start_rank = CardFactory.config.starting_card_rank
-	for i in range(STARTING_DECK_SIZE):
-		deck.append({tier = start_tier, rank = start_rank})
-	deck.shuffle()
-	
-	discard_pile.clear()
-	
-	hand.clear()
-	for i in range(STARTING_HAND_SIZE):
-		hand.append({})
-	
-	current_tier = 1
-	hand_size = STARTING_HAND_SIZE
-	current_milestone_index = 0
-	milestone_slots = [{}, {}, {}]
-	
-	has_merged = false
-	has_bought_pack = false
-	deck_viewer_unlocked = false
-	sell_unlocked = false
-	
-	upgrade_points_mod_level = 0
-	upgrade_pack_discount_level = 0
-	upgrade_critical_merge_level = 0
-	upgrade_lucky_pack_level = 0
-	upgrade_cap = CardFactory.config.base_upgrade_cap
-	
-	draw_cooldown_divisor = 1.0
-	tick_rate_multiplier = 1.0
-	deck_scoring_percent = 0.0
-	auto_draw_unlocked = false
-	auto_draw_enabled = false
-	hand_bonus_multiplier = 1.0
+	if total_cards == 0 and not can_buy_pack():
+		var pack = _generate_pack()
+		for card in pack:
+			deck.append(card)
+		deck.shuffle()
+		deck_changed.emit()

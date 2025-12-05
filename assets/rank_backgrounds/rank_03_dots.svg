@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" fill="#e8e8e8"/>
+  <g fill="#c8c8c8">
+    <!-- Row 1 -->
+    <circle cx="10" cy="10" r="4"/>
+    <circle cx="30" cy="10" r="4"/>
+    <circle cx="50" cy="10" r="4"/>
+    <circle cx="70" cy="10" r="4"/>
+    <circle cx="90" cy="10" r="4"/>
+    <circle cx="110" cy="10" r="4"/>
+    <!-- Row 2 (offset) -->
+    <circle cx="20" cy="26" r="4"/>
+    <circle cx="40" cy="26" r="4"/>
+    <circle cx="60" cy="26" r="4"/>
+    <circle cx="80" cy="26" r="4"/>
+    <circle cx="100" cy="26" r="4"/>
+    <!-- Row 3 -->
+    <circle cx="10" cy="42" r="4"/>
+    <circle cx="30" cy="42" r="4"/>
+    <circle cx="50" cy="42" r="4"/>
+    <circle cx="70" cy="42" r="4"/>
+    <circle cx="90" cy="42" r="4"/>
+    <circle cx="110" cy="42" r="4"/>
+    <!-- Row 4 (offset) -->
+    <circle cx="20" cy="58" r="4"/>
+    <circle cx="40" cy="58" r="4"/>
+    <circle cx="60" cy="58" r="4"/>
+    <circle cx="80" cy="58" r="4"/>
+    <circle cx="100" cy="58" r="4"/>
+    <!-- Row 5 -->
+    <circle cx="10" cy="74" r="4"/>
+    <circle cx="30" cy="74" r="4"/>
+    <circle cx="50" cy="74" r="4"/>
+    <circle cx="70" cy="74" r="4"/>
+    <circle cx="90" cy="74" r="4"/>
+    <circle cx="110" cy="74" r="4"/>
+    <!-- Row 6 (offset) -->
+    <circle cx="20" cy="90" r="4"/>
+    <circle cx="40" cy="90" r="4"/>
+    <circle cx="60" cy="90" r="4"/>
+    <circle cx="80" cy="90" r="4"/>
+    <circle cx="100" cy="90" r="4"/>
+    <!-- Row 7 -->
+    <circle cx="10" cy="106" r="4"/>
+    <circle cx="30" cy="106" r="4"/>
+    <circle cx="50" cy="106" r="4"/>
+    <circle cx="70" cy="106" r="4"/>
+    <circle cx="90" cy="106" r="4"/>
+    <circle cx="110" cy="106" r="4"/>
+    <!-- Row 8 (offset) -->
+    <circle cx="20" cy="122" r="4"/>
+    <circle cx="40" cy="122" r="4"/>
+    <circle cx="60" cy="122" r="4"/>
+    <circle cx="80" cy="122" r="4"/>
+    <circle cx="100" cy="122" r="4"/>
+    <!-- Row 9 -->
+    <circle cx="10" cy="138" r="4"/>
+    <circle cx="30" cy="138" r="4"/>
+    <circle cx="50" cy="138" r="4"/>
+    <circle cx="70" cy="138" r="4"/>
+    <circle cx="90" cy="138" r="4"/>
+    <circle cx="110" cy="138" r="4"/>
+    <!-- Row 10 (offset) -->
+    <circle cx="20" cy="154" r="4"/>
+    <circle cx="40" cy="154" r="4"/>
+    <circle cx="60" cy="154" r="4"/>
+    <circle cx="80" cy="154" r="4"/>
+    <circle cx="100" cy="154" r="4"/>
+  </g>
+</svg>

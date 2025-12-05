@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
+  <rect width="120" height="160" fill="#c8c8c8"/>
+  
+  <!-- Central sunburst -->
+  <g transform="translate(60,80)" fill="none" stroke="#888888" stroke-width="1">
+    <!-- Inner rays -->
+    <line x1="0" y1="-70" x2="0" y2="70"/>
+    <line x1="-50" y1="-50" x2="50" y2="50"/>
+    <line x1="-70" y1="0" x2="70" y2="0"/>
+    <line x1="-50" y1="50" x2="50" y2="-50"/>
+    <!-- More rays -->
+    <line x1="-25" y1="-65" x2="25" y2="65"/>
+    <line x1="25" y1="-65" x2="-25" y2="65"/>
+    <line x1="-65" y1="-25" x2="65" y2="25"/>
+    <line x1="-65" y1="25" x2="65" y2="-25"/>
+    <!-- Even more rays -->
+    <line x1="-45" y1="-55" x2="45" y2="55"/>
+    <line x1="45" y1="-55" x2="-45" y2="55"/>
+    <line x1="-55" y1="-45" x2="55" y2="45"/>
+    <line x1="-55" y1="45" x2="55" y2="-45"/>
+  </g>
+  
+  <!-- Concentric circles -->
+  <g transform="translate(60,80)" fill="none" stroke="#a0a0a0" stroke-width="1.5">
+    <circle r="15"/>
+    <circle r="30"/>
+    <circle r="45"/>
+    <circle r="60"/>
+  </g>
+  
+  <!-- Corner stars -->
+  <g fill="#b0b0b0" stroke="#808080" stroke-width="0.5">
+    <!-- Top-left star -->
+    <polygon points="15,15 18,9 21,15 27,15 22,19 24,25 18,21 12,25 14,19 9,15"/>
+    <!-- Top-right star -->
+    <polygon points="105,15 108,9 111,15 117,15 112,19 114,25 108,21 102,25 104,19 99,15"/>
+    <!-- Bottom-left star -->
+    <polygon points="15,145 18,139 21,145 27,145 22,149 24,155 18,151 12,155 14,149 9,145"/>
+    <!-- Bottom-right star -->
+    <polygon points="105,145 108,139 111,145 117,145 112,149 114,155 108,151 102,155 104,149 99,145"/>
+  </g>
+  
+  <!-- Decorative border elements -->
+  <g fill="none" stroke="#909090" stroke-width="2">
+    <!-- Top decorative arc -->
+    <path d="M 20,5 Q 60,-5 100,5"/>
+    <path d="M 20,10 Q 60,0 100,10"/>
+    <!-- Bottom decorative arc -->
+    <path d="M 20,155 Q 60,165 100,155"/>
+    <path d="M 20,150 Q 60,160 100,150"/>
+    <!-- Side decorations -->
+    <path d="M 5,40 Q -5,80 5,120"/>
+    <path d="M 10,40 Q 0,80 10,120"/>
+    <path d="M 115,40 Q 125,80 115,120"/>
+    <path d="M 110,40 Q 120,80 110,120"/>
+  </g>
+  
+  <!-- Diamond accents -->
+  <g fill="#b8b8b8" stroke="#888888" stroke-width="1">
+    <polygon points="60,5 65,12 60,19 55,12"/>
+    <polygon points="60,141 65,148 60,155 55,148"/>
+    <polygon points="5,80 12,85 5,90 -2,85"/>
+    <polygon points="115,80 122,85 115,90 108,85"/>
+  </g>
+</svg>

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=7 format=3 uid="uid://kubh4wig1olo"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://dnvceekwtom6w" path="res://assets/monsters/Tapeworm (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://d4hixxi7uwist" path="res://assets/monsters/Tapeworm (2).png" id="2_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Zapper"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Eleclee"
+sprite = ExtResource("2_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 50
+name = "Tapeworm"
+base_color = Color(0.35, 0.352174, 0.7, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2")])

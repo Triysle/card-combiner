@@ -5,7 +5,6 @@ extends CenterContainer
 
 signal merge_attempted(source_index: int, target_index: int)
 signal move_attempted(source_index: int, target_index: int)
-signal discard_requested(slot_index: int)
 
 @onready var grid_container: GridContainer = $GridContainer
 
@@ -43,7 +42,6 @@ func _rebuild_grid(new_size: int) -> void:
 		slot.merge_attempted.connect(_on_merge_attempted)
 		slot.move_attempted.connect(_on_move_attempted)
 		slot.hover_started.connect(_on_slot_hover_started)
-		slot.discard_requested.connect(_on_discard_requested)
 		grid_container.add_child(slot)
 		slots.append(slot)
 	
@@ -64,9 +62,6 @@ func _on_slot_hover_started(slot: Slot) -> void:
 	if _current_hover_slot and _current_hover_slot != slot:
 		_current_hover_slot.clear_drop_state()
 	_current_hover_slot = slot
-
-func _on_discard_requested(slot: Slot) -> void:
-	discard_requested.emit(slot.slot_index)
 
 func clear_all_drop_states() -> void:
 	_current_hover_slot = null

@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.5", "Forward Plus")
 [autoload]
 
 CardFactory="*res://scripts/card_factory.gd"
+MonsterRegistry="*res://scripts/monster_registry.gd"
 GameState="*res://scripts/game_state.gd"
 
 [display]

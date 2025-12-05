@@ -1,91 +1,64 @@
-[gd_scene load_steps=3 format=3 uid="uid://bgc761tvvpkuq"]
+[gd_scene load_steps=5 format=3 uid="uid://bgc761tvvpkuq"]
 
 [ext_resource type="Script" uid="uid://bicwqsiip7o7j" path="res://scripts/deck_pile.gd" id="1_deck"]
+[ext_resource type="Texture2D" uid="uid://dnqeejx0qc062" path="res://assets/UI/slot_bg.svg" id="1_iv2pi"]
+[ext_resource type="Texture2D" uid="uid://dfs3hnagihw4f" path="res://assets/cardbacks/card_back_CCLOGOS.png" id="3_cardback"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_deck"]
-bg_color = Color(0.12, 0.14, 0.18, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.3, 0.4, 0.35, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_slot"]
+texture = ExtResource("1_iv2pi")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
-[node name="DeckPile" type="Panel"]
-custom_minimum_size = Vector2(110, 150)
-theme_override_styles/panel = SubResource("StyleBoxFlat_deck")
+[node name="DeckPile" type="VBoxContainer"]
+theme_override_constants/separation = 4
 script = ExtResource("1_deck")
 
 [node name="TitleLabel" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -40.0
-offset_top = 4.0
-offset_right = 40.0
-offset_bottom = 24.0
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 12
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.55, 0.6, 1)
 text = "DECK"
 horizontal_alignment = 1
 
-[node name="CountLabel" type="Label" parent="."]
+[node name="SlotPanel" type="Panel" parent="."]
+custom_minimum_size = Vector2(120, 180)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxTexture_slot")
+
+[node name="CardBack" type="TextureRect" parent="SlotPanel"]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = 154.0
+grow_horizontal = 2
+mouse_filter = 2
+texture = ExtResource("3_cardback")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="CountLabel" type="Label" parent="SlotPanel"]
+layout_mode = 1
+anchors_preset = 12
 anchor_top = 1.0
-anchor_right = 0.5
+anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -30.0
-offset_top = -20.0
-offset_right = 30.0
+offset_top = -28.0
 offset_bottom = -4.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.9, 0.95, 0.8, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
 text = "(10)"
-horizontal_alignment = 1
-
-[node name="CardBack" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -40.0
-offset_top = -40.0
-offset_right = 40.0
-offset_bottom = 40.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0.2, 0.25, 0.35, 1)
-
-[node name="BackPattern" type="Label" parent="CardBack"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -30.0
-offset_top = -15.0
-offset_right = 30.0
-offset_bottom = 15.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0.35, 0.4, 0.5, 1)
-theme_override_font_sizes/font_size = 24
-text = "[CC]"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ReadyIndicator" type="ColorRect" parent="."]
+[node name="ReadyIndicator" type="ColorRect" parent="SlotPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -95,15 +68,15 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.3, 0.5, 0.3, 0.3)
 
-[node name="CooldownBar" type="ProgressBar" parent="."]
+[node name="CooldownBar" type="ProgressBar" parent="SlotPanel"]
 visible = false
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
 offset_left = 8.0
-offset_top = 26.0
+offset_top = 156.0
 offset_right = -8.0
-offset_bottom = 38.0
+offset_bottom = 172.0
 grow_horizontal = 2
 max_value = 10.0
 value = 5.0

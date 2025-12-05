@@ -1,0 +1,59 @@
+[gd_scene load_steps=4 format=3 uid="uid://cn38t5m6o5p4a"]
+
+[ext_resource type="Script" uid="uid://gsgr5aqp7px8" path="res://scripts/how_to_play_popup.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dhtvghbksvbbs" path="res://assets/UI/panel_bg.svg" id="2_panel"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_popup"]
+content_margin_left = 32.0
+content_margin_top = 24.0
+content_margin_right = 32.0
+content_margin_bottom = 24.0
+texture = ExtResource("2_panel")
+texture_margin_left = 48.0
+texture_margin_top = 48.0
+texture_margin_right = 48.0
+texture_margin_bottom = 48.0
+
+[node name="HowToPlayPopup" type="PopupPanel"]
+oversampling_override = 1.0
+title = "How to Play"
+initial_position = 2
+size = Vector2i(461, 298)
+visible = true
+theme_override_styles/panel = SubResource("StyleBoxTexture_popup")
+script = ExtResource("1_script")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(320, 0)
+offset_left = 32.0
+offset_top = 24.0
+offset_right = 429.0
+offset_bottom = 274.0
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.15, 0.1, 1)
+theme_override_font_sizes/font_size = 20
+text = "How to Play"
+horizontal_alignment = 1
+
+[node name="Content" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.25, 0.2, 0.15, 1)
+theme_override_font_sizes/font_size = 14
+text = "1. Buy Booster Packs to get cards
+2. Click the deck to draw cards
+3. Move cards to your Hand to generate points
+4. Combine matching cards to Rank up
+5. Submit MAX Rank cards to your collection
+
+~~ Complete your collection to win! ~~"
+horizontal_alignment = 1
+
+[node name="GotItButton" type="Button" parent="VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "Got it!"

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=7 format=3 uid="uid://cha71c5frijom"]
+
+[ext_resource type="Script" uid="uid://cw4ckb4a0up61" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Texture2D" uid="uid://cwliv8j16b5p7" path="res://assets/monsters/Boxing Marsupial (1).png" id="1_tex"]
+[ext_resource type="Script" uid="uid://bf2wnglgy6ltt" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" uid="uid://db1414l12d3el" path="res://assets/monsters/Boxing Marsupial (2).png" id="2_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+display_name = "Drobber"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Kungafoo"
+sprite = ExtResource("2_tex")
+
+[resource]
+script = ExtResource("1_species")
+id = 9
+name = "Boxing Marsupial"
+base_color = Color(0.349347, 0.925, 0.32375, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2")])

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40">
+  <!-- Dark border -->
+  <rect x="0" y="0" width="200" height="40" rx="4" ry="4" fill="#2a2a2a"/>
+  <!-- Flat fill - no shadow, pushed in look -->
+  <rect x="2" y="2" width="196" height="36" rx="3" ry="3" fill="#909090"/>
+</svg>

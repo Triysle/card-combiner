@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="MonsterSpecies" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/monster_species.gd" id="1_species"]
+[ext_resource type="Script" path="res://scripts/resources/monster_form.gd" id="2_form"]
+[ext_resource type="Texture2D" path="res://assets/monsters/Mantis Shrimp (1).png" id="1_tex"]
+[ext_resource type="Texture2D" path="res://assets/monsters/Mantis Shrimp (2).png" id="2_tex"]
+
+[sub_resource type="Resource" id="form_1"]
+script = ExtResource("2_form")
+form_index = 1
+display_name = "Punchy"
+sprite = ExtResource("1_tex")
+can_evolve = true
+
+[sub_resource type="Resource" id="form_2"]
+script = ExtResource("2_form")
+form_index = 2
+display_name = "Rainbow Rage"
+sprite = ExtResource("2_tex")
+can_evolve = false
+
+[resource]
+script = ExtResource("1_species")
+id = 34
+name = "Mantis Shrimp"
+base_color = Color(0.511014, 0.140000, 0.700000, 1)
+forms = Array[ExtResource("2_form")]([SubResource("form_1"), SubResource("form_2")])

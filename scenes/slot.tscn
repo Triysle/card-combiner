@@ -1,41 +1,19 @@
-[gd_scene load_steps=3 format=3 uid="uid://bn8pd66syxaf"]
+[gd_scene load_steps=4 format=3 uid="uid://bn8pd66syxaf"]
 
+[ext_resource type="Texture2D" uid="uid://dnqeejx0qc062" path="res://assets/UI/slot_bg.svg" id="1_ic0fu"]
 [ext_resource type="Script" uid="uid://b6vr58xooiofj" path="res://scripts/slot.gd" id="1_slot"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slot"]
-bg_color = Color(0.12, 0.14, 0.18, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.3, 0.35, 0.4, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_slot"]
+texture = ExtResource("1_ic0fu")
+texture_margin_left = 4.0
+texture_margin_top = 4.0
+texture_margin_right = 4.0
+texture_margin_bottom = 4.0
 
 [node name="Slot" type="Panel"]
-custom_minimum_size = Vector2(100, 120)
-theme_override_styles/panel = SubResource("StyleBoxFlat_slot")
+custom_minimum_size = Vector2(120, 180)
+theme_override_styles/panel = SubResource("StyleBoxTexture_slot")
 script = ExtResource("1_slot")
-
-[node name="EmptyLabel" type="Label" parent="."]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -30.0
-offset_top = -10.0
-offset_right = 30.0
-offset_bottom = 10.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0.4, 0.4, 0.45, 1)
-text = "EMPTY"
-horizontal_alignment = 1
-vertical_alignment = 1
 
 [node name="OriginIndicator" type="ColorRect" parent="."]
 visible = false
@@ -62,54 +40,26 @@ color = Color(0.2, 0.6, 0.2, 0.6)
 [node name="CardContainer" type="Control" parent="."]
 visible = false
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 10
 anchor_right = 1.0
-anchor_bottom = 1.0
+offset_bottom = 154.0
 grow_horizontal = 2
-grow_vertical = 2
 mouse_filter = 2
 
-[node name="CardBackground" type="ColorRect" parent="CardContainer"]
+[node name="OutputLabel" type="Label" parent="."]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 12
+anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 4.0
-offset_top = 4.0
-offset_right = -4.0
-offset_bottom = -4.0
+offset_top = -32.0
+offset_bottom = -3.0
 grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0.3, 0.3, 0.6, 1)
-
-[node name="VBox" type="VBoxContainer" parent="CardContainer"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-alignment = 1
-
-[node name="TierLabel" type="Label" parent="CardContainer/VBox"]
-layout_mode = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.9, 0.95, 0.8, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-text = "Tier I"
-horizontal_alignment = 1
-
-[node name="RankLabel" type="Label" parent="CardContainer/VBox"]
-layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
-text = "Rank 1"
-horizontal_alignment = 1
-
-[node name="OutputLabel" type="Label" parent="CardContainer/VBox"]
-layout_mode = 2
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
 text = "+1/s"
 horizontal_alignment = 1
+vertical_alignment = 1
