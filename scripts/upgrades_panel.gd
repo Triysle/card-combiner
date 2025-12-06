@@ -14,8 +14,8 @@ const UPGRADE_NODES: Dictionary = {
 	GameState.UpgradeType.DRAW_SPEED: "DrawSpeed",
 	GameState.UpgradeType.PACK_DISCOUNT: "PackDiscount",
 	GameState.UpgradeType.CRITICAL_MERGE: "CriticalMerge",
-	GameState.UpgradeType.MIN_RANK: "MinRank",
-	GameState.UpgradeType.MAX_RANK: "MaxRank"
+	GameState.UpgradeType.FOIL_CHANCE: "FoilChance",
+	GameState.UpgradeType.FOIL_BONUS: "FoilBonus"
 }
 
 const UPGRADE_NAMES: Dictionary = {
@@ -23,8 +23,8 @@ const UPGRADE_NAMES: Dictionary = {
 	GameState.UpgradeType.DRAW_SPEED: "Draw Speed",
 	GameState.UpgradeType.PACK_DISCOUNT: "Pack Discount",
 	GameState.UpgradeType.CRITICAL_MERGE: "Critical Merge",
-	GameState.UpgradeType.MIN_RANK: "Min Pack Rank",
-	GameState.UpgradeType.MAX_RANK: "Max Pack Rank"
+	GameState.UpgradeType.FOIL_CHANCE: "Foil Chance",
+	GameState.UpgradeType.FOIL_BONUS: "Foil Bonus"
 }
 
 func _ready() -> void:
@@ -101,25 +101,25 @@ func _get_description(upgrade_type: GameState.UpgradeType, level: int, maxed: bo
 			return "Pack cost divided by %d -> %d" % [current, next]
 		
 		GameState.UpgradeType.CRITICAL_MERGE:
-			var current = level * 10
-			var next = (level + 1) * 10
+			var current = level * 2
+			var next = (level + 1) * 2
 			if maxed:
 				return "%d%% chance for +2 ranks" % current
 			return "%d%% -> %d%% chance for +2 ranks" % [current, next]
 		
-		GameState.UpgradeType.MIN_RANK:
-			var current = 1 + level
-			var next = current + 1
+		GameState.UpgradeType.FOIL_CHANCE:
+			var current = level * 5
+			var next = (level + 1) * 5
 			if maxed:
-				return "Packs drop at least R%d" % current
-			return "Packs drop at least R%d -> R%d" % [current, next]
+				return "%d%% chance for foil cards" % current
+			return "%d%% -> %d%% foil chance" % [current, next]
 		
-		GameState.UpgradeType.MAX_RANK:
-			var current = 5 + level
+		GameState.UpgradeType.FOIL_BONUS:
+			var current = 2 + level
 			var next = current + 1
 			if maxed:
-				return "Packs can drop up to R%d" % current
-			return "Packs can drop up to R%d -> R%d" % [current, next]
+				return "Foil cards give %dx points" % current
+			return "Foil cards give %dx -> %dx points" % [current, next]
 	
 	return ""
 

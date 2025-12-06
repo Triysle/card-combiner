@@ -65,14 +65,14 @@ theme_override_font_sizes/font_size = 10
 text = "Critical Merge - 10K
 0% → 10% chance for +2 ranks"
 
-[node name="MinRank" type="Button" parent="VBox/Content"]
+[node name="FoilChance" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
 text = "Min Pack Rank - 10K
 Packs drop R1+ → R2+"
 
-[node name="MaxRank" type="Button" parent="VBox/Content"]
+[node name="FoilBonus" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10

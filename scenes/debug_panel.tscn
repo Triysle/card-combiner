@@ -57,3 +57,8 @@ text = "Grant 1M Points"
 unique_name_in_owner = true
 layout_mode = 2
 text = "Create MAX Card"
+
+[node name="FoilCardButton" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Create Foil Card"

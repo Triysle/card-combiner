@@ -2,7 +2,7 @@
 extends Node
 
 ## Factory for creating and managing cards - autoload singleton
-## Card structure: {mid: int, form: int, rank: int, is_max: bool}
+## Card structure: {mid: int, form: int, rank: int, is_max: bool, is_foil: bool}
 
 const CARD_DISPLAY_SCENE = preload("res://scenes/card_display.tscn")
 
@@ -13,20 +13,22 @@ func _ready() -> void:
 
 # === CARD CREATION ===
 
-func create_card(mid: int, form: int, rank: int = 1) -> Dictionary:
+func create_card(mid: int, form: int, rank: int = 1, foil: bool = false) -> Dictionary:
 	return {
 		"mid": mid,
 		"form": form,
-		"rank": clampi(rank, 1, 9),
-		"is_max": false
+		"rank": clampi(rank, 1, 4),  # 1-4 for normal cards
+		"is_max": false,
+		"is_foil": foil
 	}
 
-func create_max_card(mid: int, form: int) -> Dictionary:
+func create_max_card(mid: int, form: int, foil: bool = false) -> Dictionary:
 	return {
 		"mid": mid,
 		"form": form,
-		"rank": 10,  # MAX cards are effectively rank 10
-		"is_max": true
+		"rank": 5,  # MAX cards are rank 5
+		"is_max": true,
+		"is_foil": foil
 	}
 
 # === CARD VALIDATION ===
@@ -81,13 +83,18 @@ func is_final_form(card: Dictionary) -> bool:
 		return true
 	return MonsterRegistry.is_final_form(card.mid, card.form)
 
+func is_foil(card: Dictionary) -> bool:
+	if is_empty_card(card):
+		return false
+	return card.get("is_foil", false)
+
 # === POINT VALUES ===
 
 func get_card_points_value(card: Dictionary) -> int:
 	if is_empty_card(card):
 		return 0
 	var form = card.form
-	# Point value = form² × rank
+	# Point value = form² × rank (1-5)
 	return (form * form) * card.rank
 
 # === CARD COLORS ===
@@ -104,6 +111,30 @@ func get_card_species_color(card: Dictionary) -> Color:
 	# Fallback if species not found or no color set
 	return Color(0.5, 0.5, 0.5)
 
+func get_card_secondary_color(card: Dictionary) -> Color:
+	## Returns the species secondary color for gradient backgrounds
+	if is_empty_card(card):
+		return Color(0.25, 0.25, 0.25)
+	
+	var species = get_card_species(card)
+	if species and "secondary_color" in species:
+		return species.secondary_color
+	
+	# Fallback - derive from base color
+	var base = get_card_species_color(card)
+	return base.darkened(0.3)
+
+func get_card_gradient_type(card: Dictionary) -> String:
+	## Returns the gradient type for card background
+	if is_empty_card(card):
+		return "linear_diagonal_down"
+	
+	var species = get_card_species(card)
+	if species and "gradient_type" in species:
+		return species.gradient_type
+	
+	return "linear_diagonal_down"
+
 func get_card_color(card: Dictionary) -> Color:
 	## Returns the species color (for backward compatibility)
 	return get_card_species_color(card)
@@ -115,9 +146,10 @@ func card_to_string(card: Dictionary) -> String:
 		return "Empty"
 	
 	var card_name = get_card_name(card)
+	var foil_str = " (Foil)" if card.get("is_foil", false) else ""
 	if card.is_max:
-		return "%s MAX" % card_name
-	return "%s R%d" % [card_name, card.rank]
+		return "%s MAX%s" % [card_name, foil_str]
+	return "%s R%d%s" % [card_name, card.rank, foil_str]
 
 # === DISPLAY CREATION ===
 

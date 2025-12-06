@@ -13,6 +13,12 @@ extends Resource
 ## Species color - determines card background and plate tint
 @export var base_color: Color = Color(0.5, 0.5, 0.5)
 
+## Secondary color for gradient background
+@export var secondary_color: Color = Color(0.4, 0.4, 0.4)
+
+## Gradient type for card background
+@export_enum("linear_horizontal", "linear_vertical", "linear_diagonal_down", "linear_diagonal_up", "radial_center", "radial_corner", "diamond") var gradient_type: String = "linear_diagonal_down"
+
 ## All forms for this species, in evolution order
 @export var forms: Array[MonsterForm] = []
 

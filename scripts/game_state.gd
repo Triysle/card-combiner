@@ -17,13 +17,13 @@ signal form_unlocked(mid: int, form: int, card: Dictionary)
 signal species_unlocked(mid: int, card: Dictionary)
 
 # ===== CONSTANTS =====
-const MAX_RANK: int = 9          # Highest normal rank (R9)
-const MAX_CARD_RANK: int = 10    # MAX cards count as rank 10 for points
+const MAX_NORMAL_RANK: int = 4    # Highest rank before MAX (★★★★)
+const MAX_CARD_RANK: int = 5      # MAX cards are rank 5
 const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: int = 7  # Bumped for species unlock system
+const SAVE_VERSION: int = 8  # Bumped for rank reduction + foil system
 const STARTING_SPECIES_COUNT: int = 10  # How many species unlocked at game start
 
 # Tick timer
@@ -35,8 +35,8 @@ enum UpgradeType {
 	DRAW_SPEED,
 	PACK_DISCOUNT,
 	CRITICAL_MERGE,
-	MIN_RANK,
-	MAX_RANK
+	FOIL_CHANCE,
+	FOIL_BONUS
 }
 
 enum MergeResult {
@@ -160,7 +160,7 @@ func calculate_points_per_tick() -> int:
 	var total = 0
 	for card in hand:
 		if CardFactory.is_valid_card(card):
-			total += CardFactory.get_card_points_value(card)
+			total += get_card_points_with_foil(card)
 	
 	# Apply points multiplier
 	var mult_level = upgrade_levels.get(UpgradeType.POINTS_MULT, 0)
@@ -168,6 +168,21 @@ func calculate_points_per_tick() -> int:
 		total *= int(pow(2, mult_level))
 	
 	return total
+
+## Calculate points for a single card including foil bonus (but not global multiplier)
+func get_card_points_with_foil(card: Dictionary) -> int:
+	if not CardFactory.is_valid_card(card):
+		return 0
+	
+	var base_pts = CardFactory.get_card_points_value(card)
+	
+	# Apply foil bonus if applicable
+	if card.get("is_foil", false):
+		var foil_level = upgrade_levels.get(UpgradeType.FOIL_BONUS, 0)
+		var foil_mult = 2 + foil_level  # 2x, 3x, 4x, 5x
+		base_pts *= foil_mult
+	
+	return base_pts
 
 # ===== DECK & DRAW =====
 func draw_card() -> void:
@@ -251,7 +266,7 @@ func add_to_discard(card: Dictionary) -> void:
 		discard_pile.push_front(card)
 		discard_changed.emit()
 
-# ===== MERGING (SIMPLIFIED) =====
+# ===== MERGING =====
 func validate_merge(card_a: Dictionary, card_b: Dictionary) -> MergeResult:
 	if CardFactory.is_empty_card(card_a) or CardFactory.is_empty_card(card_b):
 		return MergeResult.INVALID_EMPTY
@@ -274,19 +289,25 @@ func merge_cards(card_a: Dictionary, card_b: Dictionary) -> Dictionary:
 	var form = card_a.form
 	var rank = card_a.rank
 	
-	# R9 + R9 = MAX (no rank increase, just becomes MAX)
-	if rank == MAX_RANK:
-		return CardFactory.create_max_card(mid, form)
+	# Rank 4 + Rank 4 = MAX
+	if rank == MAX_NORMAL_RANK:
+		return CardFactory.create_max_card(mid, form, _roll_foil())
 	
 	# Check for critical merge (+2 ranks instead of +1)
 	var crit_level = upgrade_levels.get(UpgradeType.CRITICAL_MERGE, 0)
-	var crit_chance = crit_level * 0.1  # 10% per level
+	var crit_chance = crit_level * 0.02  # 2% per level, max 10%
 	var is_critical = randf() < crit_chance
 	var rank_increase = 2 if is_critical else 1
 	
-	var new_rank = mini(rank + rank_increase, MAX_RANK)
+	# Critical cannot create MAX - caps at rank 4
+	var new_rank = mini(rank + rank_increase, MAX_NORMAL_RANK)
 	
-	return CardFactory.create_card(mid, form, new_rank)
+	return CardFactory.create_card(mid, form, new_rank, _roll_foil())
+
+func _roll_foil() -> bool:
+	var foil_level = upgrade_levels.get(UpgradeType.FOIL_CHANCE, 0)
+	var foil_chance = foil_level * 0.05  # 5% per level, max 25%
+	return randf() < foil_chance
 
 func get_merge_failure_reason(result: MergeResult) -> String:
 	match result:
@@ -364,43 +385,31 @@ func _generate_pack() -> Array[Dictionary]:
 	if available.is_empty():
 		return pack
 	
-	# Get min/max rank from upgrades
-	var min_rank_level = upgrade_levels.get(UpgradeType.MIN_RANK, 0)
-	var max_rank_level = upgrade_levels.get(UpgradeType.MAX_RANK, 0)
-	var min_rank = 1 + min_rank_level  # 1-5
-	var max_rank = 5 + max_rank_level  # 5-9
-	
 	for i in range(PACK_SIZE):
 		var choice = available[randi() % available.size()]
-		var rank = _roll_rank(min_rank, max_rank)
+		var rank: int
 		
-		# Pity system for later slots
-		if i == 2:  # Slot 3
-			rank = maxi(rank, min_rank + 1)
-		elif i == 4:  # Slot 5
-			rank = maxi(rank, min_rank + 2)
+		# Pity system for last slot only
+		if i == 4:  # Slot 5: 90% ★★, 10% ★★★
+			rank = 2 if randf() < 0.90 else 3
+		else:
+			rank = _roll_pack_rank()
 		
-		rank = clampi(rank, min_rank, max_rank)
-		pack.append(CardFactory.create_card(choice.mid, choice.form, rank))
+		rank = clampi(rank, 1, MAX_NORMAL_RANK)
+		var is_foil = _roll_foil()
+		pack.append(CardFactory.create_card(choice.mid, choice.form, rank, is_foil))
 	
 	return pack
 
-func _roll_rank(min_r: int, max_r: int) -> int:
-	## Roll a rank weighted toward lower values within range
-	var range_size = max_r - min_r + 1
-	if range_size <= 1:
-		return min_r
-	
-	# Weighted roll favoring lower ranks
+func _roll_pack_rank() -> int:
+	## Roll a rank weighted toward lower values (1-4 only, no MAX from packs)
 	var roll = randf()
-	if roll < 0.5:
-		return min_r
-	elif roll < 0.75:
-		return mini(min_r + 1, max_r)
-	elif roll < 0.9:
-		return clampi(min_r + randi_range(1, 2), min_r, max_r)
+	if roll < 0.90:
+		return 1  # ★ - 90%
+	elif roll < 0.99:
+		return 2  # ★★ - 9%
 	else:
-		return clampi(min_r + randi_range(2, range_size - 1), min_r, max_r)
+		return 3  # ★★★ - 1%
 
 # ===== SPECIES & COLLECTION =====
 
@@ -511,7 +520,7 @@ func confirm_submission() -> bool:
 		# Unlock next form of same species
 		var next_form = form + 1
 		unlocked_forms[mid] = next_form
-		var unlocked_card = CardFactory.create_card(mid, next_form, 1)
+		var unlocked_card = CardFactory.create_card(mid, next_form, 1, false)
 		deck.append(unlocked_card)
 		deck.shuffle()
 		deck_changed.emit()
@@ -526,7 +535,7 @@ func confirm_submission() -> bool:
 			unlocked_forms[next_species] = 1
 			
 			# Create starter card for new species
-			var starter_card = CardFactory.create_card(next_species, 1, 1)
+			var starter_card = CardFactory.create_card(next_species, 1, 1, false)
 			deck.append(starter_card)
 			deck.shuffle()
 			deck_changed.emit()
@@ -574,11 +583,11 @@ func get_upgrade_cost(type: UpgradeType) -> int:
 		UpgradeType.CRITICAL_MERGE:
 			if level >= 5: return -1
 			return int(10000 * pow(10, level))
-		UpgradeType.MIN_RANK:
-			if level >= 4: return -1  # Max level 4 (min rank 5)
-			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B
-		UpgradeType.MAX_RANK:
-			if level >= 4: return -1  # Max level 4 (max rank 9)
+		UpgradeType.FOIL_CHANCE:
+			if level >= 5: return -1  # Max level 5 (25%)
+			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B, 1T
+		UpgradeType.FOIL_BONUS:
+			if level >= 4: return -1  # Max level 4 (5x)
 			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B
 	
 	return -1
@@ -595,40 +604,7 @@ func buy_upgrade(type: UpgradeType) -> bool:
 		return false
 	
 	upgrade_levels[type] = get_upgrade_level(type) + 1
-	
-	# Min rank upgrade: bump all existing cards below new minimum
-	if type == UpgradeType.MIN_RANK:
-		_apply_min_rank_upgrade()
-	
 	return true
-
-func _apply_min_rank_upgrade() -> void:
-	## Upgrade all cards below the new minimum rank
-	var min_rank = 1 + upgrade_levels.get(UpgradeType.MIN_RANK, 0)
-	var upgraded_count = 0
-	
-	for i in range(deck.size()):
-		if CardFactory.is_valid_card(deck[i]) and not deck[i].is_max:
-			if deck[i].rank < min_rank:
-				deck[i].rank = min_rank
-				upgraded_count += 1
-	
-	for i in range(discard_pile.size()):
-		if CardFactory.is_valid_card(discard_pile[i]) and not discard_pile[i].is_max:
-			if discard_pile[i].rank < min_rank:
-				discard_pile[i].rank = min_rank
-				upgraded_count += 1
-	
-	for i in range(hand.size()):
-		if CardFactory.is_valid_card(hand[i]) and not hand[i].is_max:
-			if hand[i].rank < min_rank:
-				hand[i].rank = min_rank
-				upgraded_count += 1
-	
-	if upgraded_count > 0:
-		deck_changed.emit()
-		discard_changed.emit()
-		hand_changed.emit()
 
 func get_upgrade_name(type: UpgradeType) -> String:
 	match type:
@@ -636,8 +612,8 @@ func get_upgrade_name(type: UpgradeType) -> String:
 		UpgradeType.DRAW_SPEED: return "Draw Speed"
 		UpgradeType.PACK_DISCOUNT: return "Pack Discount"
 		UpgradeType.CRITICAL_MERGE: return "Critical Merge"
-		UpgradeType.MIN_RANK: return "Min Pack Rank"
-		UpgradeType.MAX_RANK: return "Max Pack Rank"
+		UpgradeType.FOIL_CHANCE: return "Foil Chance"
+		UpgradeType.FOIL_BONUS: return "Foil Bonus"
 	return "Unknown"
 
 func get_upgrade_description(type: UpgradeType) -> String:
@@ -659,20 +635,20 @@ func get_upgrade_description(type: UpgradeType) -> String:
 			var next = int(pow(2, level + 1))
 			return "1/%d -> 1/%d cost" % [discount, next]
 		UpgradeType.CRITICAL_MERGE:
-			var chance = level * 10
+			var chance = level * 2
 			if level >= 5:
 				return "%d%% (MAX)" % chance
-			return "%d%% -> %d%%" % [chance, chance + 10]
-		UpgradeType.MIN_RANK:
-			var current = 1 + level
+			return "%d%% -> %d%%" % [chance, chance + 2]
+		UpgradeType.FOIL_CHANCE:
+			var chance = level * 5
+			if level >= 5:
+				return "%d%% (MAX)" % chance
+			return "%d%% -> %d%%" % [chance, chance + 5]
+		UpgradeType.FOIL_BONUS:
+			var mult = 2 + level
 			if level >= 4:
-				return "R%d (MAX)" % current
-			return "R%d -> R%d floor" % [current, current + 1]
-		UpgradeType.MAX_RANK:
-			var current = 5 + level
-			if level >= 4:
-				return "R%d (MAX)" % current
-			return "R%d -> R%d ceiling" % [current, current + 1]
+				return "%dx (MAX)" % mult
+			return "%dx -> %dx" % [mult, mult + 1]
 	return ""
 
 # ===== SAVE/LOAD =====

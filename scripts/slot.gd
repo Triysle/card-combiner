@@ -59,7 +59,8 @@ func get_card_data() -> Dictionary:
 	return card_data
 
 func get_output() -> int:
-	return CardFactory.get_card_points_value(card_data)
+	# Use GameState helper to include foil bonus
+	return GameState.get_card_points_with_foil(card_data)
 
 func _update_display() -> void:
 	if not is_node_ready():
