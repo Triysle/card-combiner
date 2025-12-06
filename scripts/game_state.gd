@@ -23,7 +23,7 @@ const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: String = "0.6.0"
+const SAVE_VERSION: String = "0.6.1"
 const STARTING_SPECIES_COUNT: int = 10  # How many species unlocked at game start
 
 # Tick timer
@@ -31,10 +31,10 @@ var _tick_timer: Timer
 
 # ===== ENUMS =====
 enum UpgradeType {
-	POINTS_MULT,
+	POINTS_MOD,
 	DRAW_SPEED,
 	PACK_DISCOUNT,
-	COLLECTION_MULT,
+	COLLECTION_MOD,
 	FOIL_CHANCE,
 	FOIL_BONUS
 }
@@ -46,6 +46,16 @@ enum MergeResult {
 	INVALID_MAX,
 	INVALID_RANK,
 	INVALID_FORM
+}
+
+# ===== UPGRADE CAPS =====
+const UPGRADE_CAPS: Dictionary = {
+	UpgradeType.POINTS_MOD: -1,      # No cap
+	UpgradeType.DRAW_SPEED: 5,       # 5 levels: 10s → 5s → 2.5s → 1.25s → 0.625s → 0.5s
+	UpgradeType.PACK_DISCOUNT: 90,   # 90% max discount
+	UpgradeType.COLLECTION_MOD: -1,  # No cap
+	UpgradeType.FOIL_CHANCE: 90,     # 90% max chance
+	UpgradeType.FOIL_BONUS: 6,       # 6 levels: 2× → 4× → 8× → 16× → 32× → 64× → 100×
 }
 
 # ===== GAME STATE =====
@@ -160,12 +170,11 @@ func calculate_points_per_tick() -> int:
 	var hand_total = get_hand_points_rate()
 	var collection_total = get_collection_points_rate()
 	
-	# Apply points multiplier to combined total
-	var mult_level = upgrade_levels.get(UpgradeType.POINTS_MULT, 0)
-	var total = hand_total + collection_total
-	if mult_level > 0:
-		total *= int(pow(2, mult_level))
+	# Apply points modifier (additive: 1.0 + 0.1 per level)
+	var points_level = upgrade_levels.get(UpgradeType.POINTS_MOD, 0)
+	var points_mult = 1.0 + (points_level * 0.1)
 	
+	var total = int((hand_total + collection_total) * points_mult)
 	return total
 
 ## Get points per tick from hand cards only (before global multiplier)
@@ -179,14 +188,13 @@ func get_hand_points_rate() -> int:
 ## Get points per tick from collection (before global multiplier)
 func get_collection_points_rate() -> int:
 	var submitted_count = get_submitted_form_count()
-	var base_rate = 100 * submitted_count
+	var base_rate = 10 * submitted_count
 	
-	# Apply collection multiplier
-	var coll_level = upgrade_levels.get(UpgradeType.COLLECTION_MULT, 0)
-	if coll_level > 0:
-		base_rate *= int(pow(2, coll_level))
+	# Apply collection modifier (additive: 1.0 + 0.1 per level)
+	var coll_level = upgrade_levels.get(UpgradeType.COLLECTION_MOD, 0)
+	var coll_mult = 1.0 + (coll_level * 0.1)
 	
-	return base_rate
+	return int(base_rate * coll_mult)
 
 ## Calculate points for a single card including foil bonus (but not global multiplier)
 func get_card_points_with_foil(card: Dictionary) -> int:
@@ -197,11 +205,17 @@ func get_card_points_with_foil(card: Dictionary) -> int:
 	
 	# Apply foil bonus if applicable
 	if card.get("is_foil", false):
-		var foil_level = upgrade_levels.get(UpgradeType.FOIL_BONUS, 0)
-		var foil_mult = 2 + foil_level  # 2x, 3x, 4x, 5x
+		var foil_mult = get_foil_multiplier()
 		base_pts *= foil_mult
 	
 	return base_pts
+
+## Get current foil multiplier based on upgrade level
+func get_foil_multiplier() -> int:
+	var foil_level = upgrade_levels.get(UpgradeType.FOIL_BONUS, 0)
+	# 2× base, doubles each level, capped at 100×
+	var mult = int(pow(2, foil_level + 1))  # Level 0 = 2, Level 1 = 4, etc.
+	return mini(mult, 100)
 
 # ===== DECK & DRAW =====
 func draw_card() -> void:
@@ -232,8 +246,9 @@ func draw_card() -> void:
 
 func get_draw_cooldown() -> float:
 	var level = upgrade_levels.get(UpgradeType.DRAW_SPEED, 0)
-	var cooldowns = [10.0, 5.0, 2.5, 1.25, 0.5]
-	return cooldowns[mini(level, cooldowns.size() - 1)]
+	# Halves each level: 10 → 5 → 2.5 → 1.25 → 0.625 → 0.5 (capped)
+	var cooldown = 10.0 / pow(2, level)
+	return maxf(cooldown, 0.5)
 
 # ===== HAND MANAGEMENT =====
 func get_hand_slot(index: int) -> Dictionary:
@@ -320,13 +335,6 @@ func merge_cards(card_a: Dictionary, card_b: Dictionary) -> Dictionary:
 	var new_rank = rank + 1
 	return CardFactory.create_card(mid, form, new_rank, is_foil)
 
-func _roll_foil() -> bool:
-	## Roll for foil chance based on upgrade level (5% per level, max 25%)
-	## Used only for pack generation
-	var foil_level = upgrade_levels.get(UpgradeType.FOIL_CHANCE, 0)
-	var foil_chance = foil_level * 0.05
-	return randf() < foil_chance
-
 func get_merge_failure_reason(result: MergeResult) -> String:
 	match result:
 		MergeResult.INVALID_EMPTY:
@@ -344,17 +352,16 @@ func get_merge_failure_reason(result: MergeResult) -> String:
 
 # ===== BOOSTER PACKS =====
 func get_pack_cost() -> int:
-	# Cost = total card value * 10 (0 cards = free)
+	# Cost = total card value * 10
 	var card_value = _get_total_card_value()
+	var base_cost = card_value * 10
 	
-	# Apply discount from upgrades
+	# Apply discount (additive percentage reduction)
 	var discount_level = upgrade_levels.get(UpgradeType.PACK_DISCOUNT, 0)
-	var cost = card_value * 10
-	for i in range(discount_level):
-		cost = cost / 2.0
-	cost = int(cost)
+	var discount_percent = mini(discount_level, 90)  # Cap at 90%
+	var final_cost = base_cost * (100 - discount_percent) / 100
 	
-	return cost
+	return int(final_cost)
 
 func _get_total_card_value() -> int:
 	var total = 0
@@ -403,6 +410,13 @@ func _generate_pack() -> Array[Dictionary]:
 	if available.is_empty():
 		return pack
 	
+	# Roll for ONE foil in the pack (random slot if successful)
+	var foil_chance_level = upgrade_levels.get(UpgradeType.FOIL_CHANCE, 0)
+	var foil_chance = mini(foil_chance_level, 90) / 100.0  # Cap at 90%
+	var foil_slot = -1
+	if randf() < foil_chance:
+		foil_slot = randi() % PACK_SIZE  # Random slot 0-4
+	
 	for i in range(PACK_SIZE):
 		var choice = available[randi() % available.size()]
 		var rank: int
@@ -414,7 +428,7 @@ func _generate_pack() -> Array[Dictionary]:
 			rank = _roll_pack_rank()
 		
 		rank = clampi(rank, 1, MAX_NORMAL_RANK)
-		var is_foil = _roll_foil()
+		var is_foil = (i == foil_slot)
 		pack.append(CardFactory.create_card(choice.mid, choice.form, rank, is_foil))
 	
 	return pack
@@ -589,19 +603,35 @@ func get_upgrade_level(type: UpgradeType) -> int:
 
 func get_upgrade_cost(type: UpgradeType) -> int:
 	var level = get_upgrade_level(type)
+	var cap = UPGRADE_CAPS.get(type, -1)
 	
-	# Draw Speed caps at level 4
-	if type == UpgradeType.DRAW_SPEED and level >= 4:
-		return -1
-	# Foil Chance caps at level 5
-	if type == UpgradeType.FOIL_CHANCE and level >= 5:
-		return -1
-	# Foil Bonus caps at level 4
-	if type == UpgradeType.FOIL_BONUS and level >= 4:
+	# Check if maxed
+	if cap >= 0 and level >= cap:
 		return -1
 	
-	# All upgrades: 100 base × 10 per level
-	return int(100 * pow(10, level))
+	# Cost formulas based on upgrade type
+	match type:
+		UpgradeType.POINTS_MOD:
+			# Minor scaling: 10 + 50 * level (linear, starts at 10)
+			return 10 + 50 * level
+		
+		UpgradeType.COLLECTION_MOD:
+			# Minor scaling: 100 + 50 * level (linear, starts at 100)
+			return 100 + 50 * level
+		
+		UpgradeType.PACK_DISCOUNT, UpgradeType.FOIL_CHANCE:
+			# Average scaling: 1000 * (level+1)² (quadratic, starts at 1000)
+			return 1000 * (level + 1) * (level + 1)
+		
+		UpgradeType.DRAW_SPEED:
+			# Major scaling: 100 * 10^level (exponential, starts at 100)
+			return int(100 * pow(10, level))
+		
+		UpgradeType.FOIL_BONUS:
+			# Major scaling: 1000 * 10^(level+1) (exponential, starts at 10,000)
+			return int(1000 * pow(10, level + 1))
+	
+	return -1
 
 func can_buy_upgrade(type: UpgradeType) -> bool:
 	var cost = get_upgrade_cost(type)
@@ -619,46 +649,62 @@ func buy_upgrade(type: UpgradeType) -> bool:
 
 func get_upgrade_name(type: UpgradeType) -> String:
 	match type:
-		UpgradeType.POINTS_MULT: return "Points x2"
+		UpgradeType.POINTS_MOD: return "Points Boost"
 		UpgradeType.DRAW_SPEED: return "Draw Speed"
 		UpgradeType.PACK_DISCOUNT: return "Pack Discount"
-		UpgradeType.COLLECTION_MULT: return "Collection x2"
+		UpgradeType.COLLECTION_MOD: return "Collection Boost"
 		UpgradeType.FOIL_CHANCE: return "Foil Chance"
 		UpgradeType.FOIL_BONUS: return "Foil Bonus"
 	return "Unknown"
 
 func get_upgrade_description(type: UpgradeType) -> String:
 	var level = get_upgrade_level(type)
+	var cap = UPGRADE_CAPS.get(type, -1)
+	var is_maxed = cap >= 0 and level >= cap
+	
 	match type:
-		UpgradeType.POINTS_MULT:
-			var mult = int(pow(2, level))
-			var next_mult = int(pow(2, level + 1))
-			return "%dx -> %dx" % [mult, next_mult]
+		UpgradeType.POINTS_MOD:
+			var current = 100 + level * 10
+			var next = current + 10
+			if is_maxed:
+				return "+%d%% points" % (current - 100)
+			return "+%d%% -> +%d%% points" % [current - 100, next - 100]
+		
 		UpgradeType.DRAW_SPEED:
-			var speeds = [10.0, 5.0, 2.5, 1.25, 0.5]
-			var current = speeds[mini(level, 4)]
-			if level >= 4:
-				return "%.1fs (MAX)" % current
-			var next = speeds[mini(level + 1, 4)]
-			return "%.1fs -> %.1fs" % [current, next]
+			var current = maxf(10.0 / pow(2, level), 0.5)
+			if is_maxed:
+				return "%.2fs (MAX)" % current
+			var next = maxf(10.0 / pow(2, level + 1), 0.5)
+			return "%.2fs -> %.2fs" % [current, next]
+		
 		UpgradeType.PACK_DISCOUNT:
-			var discount = int(pow(2, level))
-			var next = int(pow(2, level + 1))
-			return "1/%d -> 1/%d cost" % [discount, next]
-		UpgradeType.COLLECTION_MULT:
-			var mult = int(pow(2, level))
-			var next_mult = int(pow(2, level + 1))
-			return "%dx -> %dx" % [mult, next_mult]
+			var current = mini(level, 90)
+			if is_maxed:
+				return "%d%% off (MAX)" % current
+			var next = mini(level + 1, 90)
+			return "%d%% -> %d%% off" % [current, next]
+		
+		UpgradeType.COLLECTION_MOD:
+			var current = 100 + level * 10
+			var next = current + 10
+			if is_maxed:
+				return "+%d%% collection" % (current - 100)
+			return "+%d%% -> +%d%% collection" % [current - 100, next - 100]
+		
 		UpgradeType.FOIL_CHANCE:
-			var chance = level * 5
-			if level >= 5:
-				return "%d%% (MAX)" % chance
-			return "%d%% -> %d%%" % [chance, chance + 5]
+			var current = mini(level, 90)
+			if is_maxed:
+				return "%d%% chance (MAX)" % current
+			var next = mini(level + 1, 90)
+			return "%d%% -> %d%% chance" % [current, next]
+		
 		UpgradeType.FOIL_BONUS:
-			var mult = 2 + level
-			if level >= 4:
-				return "%dx (MAX)" % mult
-			return "%dx -> %dx" % [mult, mult + 1]
+			var current = mini(int(pow(2, level + 1)), 100)
+			if is_maxed:
+				return "%d× bonus (MAX)" % current
+			var next = mini(int(pow(2, level + 2)), 100)
+			return "%d× -> %d× bonus" % [current, next]
+	
 	return ""
 
 # ===== SAVE/LOAD =====
@@ -711,10 +757,11 @@ func load_game() -> bool:
 	return true
 
 func _is_save_compatible(version) -> bool:
-	# Accept string version "0.6.0" format
+	# Accept current version
 	if version is String:
-		return version == SAVE_VERSION
-	# Reject old integer versions (incompatible format)
+		# Accept 0.6.x and 0.7.x saves
+		if version.begins_with("0.6.") or version.begins_with("0.7."):
+			return true
 	return false
 
 func reset_game() -> void:

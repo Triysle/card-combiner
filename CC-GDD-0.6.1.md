@@ -1,6 +1,6 @@
 # Card Combiner - Game Design Document
  
-**Version:** 0.6.0  
+**Version:** 0.6.1  
 **Last Updated:** December 2025
 
 ---
@@ -237,6 +237,7 @@ Foil cards are visually distinct variants with animated holographic rainbow effe
 ### Foil Mechanics
 
 - **Pack-Only Source**: Foils only drop from booster packs. Base chance is 0%, increased via Foil Chance upgrade.
+- **One Per Pack Maximum**: Each pack rolls once for foil chance. If successful, exactly one random card in the pack becomes foil.
 - **Merge Inheritance**: If either parent card is foil, the result is foil. Merging two non-foils always produces a non-foil.
 - **MAX Always Foil**: All MAX cards are automatically foil, regardless of parent foil status.
 - **Submission**: Foil MAX cards submit normally, no special treatment.
@@ -254,7 +255,7 @@ Any ★★★★ + Any ★★★★ = Foil MAX (always)
 Foil cards generate bonus points in hand slots:
 
 - **Base Bonus**: Foil cards generate 2× points
-- **Upgraded Bonus**: Foil Bonus upgrade increases multiplier (2×→3×→4×→5×)
+- **Upgraded Bonus**: Foil Bonus upgrade increases multiplier (2×→4×→8×→16×→32×→64×→100×)
 
 **Formula:**
 ```
@@ -407,7 +408,7 @@ Combined panel containing both collection viewer access and submission:
 Submitted MAX cards passively generate points:
 
 - **Base Rate**: 100 points per submitted MAX card per tick
-- **With Upgrade**: 100 × submitted_count × Collection Doubler (2^level)
+- **With Upgrade**: 100 × submitted_count × (1.0 + Collection Boost level × 0.1)
 
 ### Submit Slot
 
@@ -507,18 +508,18 @@ Hand Rate = Sum of all card points in hand
 
 **Collection:**
 ```
-Collection Rate = 100 × submitted_count × Collection Doubler (2^level)
+Collection Rate = 10 × submitted_count × (1.0 + Collection Boost level × 0.1)
 ```
 
 **Total per Tick:**
 ```
-Points per Tick = (Hand Rate + Collection Rate) × Points Doubler (2^level)
+Points per Tick = (Hand Rate + Collection Rate) × (1.0 + Points Boost level × 0.1)
 ```
 
 **Example**: 
-- Hand: Form II × Rank 3 × Foil (2×) = 12 pts
-- Collection: 5 submitted × 100 × 2× doubler = 1000 pts
-- Total: (12 + 1000) × 2× points doubler = 2024 pts/tick
+- Hand: Form II × Rank 3 × Foil (8×) = 48 pts
+- Collection: 5 submitted × 100 × 1.2 (20% boost) = 600 pts
+- Total: (48 + 600) × 1.1 (10% points boost) = 712 pts/tick
 
 **Note**: Cards in deck or discard do NOT generate points.
 
@@ -527,12 +528,13 @@ Points per Tick = (Hand Rate + Collection Rate) × Points Doubler (2^level)
 **Formula**:
 ```
 Base Cost = Total Card Value × 10
-Final Cost = Base Cost / Pack Discount Divisor
+Final Cost = Base Cost × (100 - Pack Discount%) / 100
 ```
 
 Where Total Card Value = sum of (Form × Rank) for all owned cards.
 
 **First Pack**: Free (0 cards = 0 cost)
+**Maximum Discount**: 90% (packs never become free)
 
 ### Softlock Prevention
 
@@ -547,7 +549,7 @@ If player has 0 cards and cannot afford a pack, a free pack is automatically gra
 - **5 cards per pack**
 - **Variable monsters**: Random from unlocked species' unlocked forms
 - **Variable ranks**: Heavily weighted toward ★
-- **Foil chance**: Each card rolls independently (base 0%, upgraded via Foil Chance)
+- **Foil chance**: One roll per pack; if successful, one random card becomes foil
 
 ### Rank Distribution
 
@@ -562,6 +564,12 @@ If player has 0 cards and cannot afford a pack, a free pack is automatically gra
 ### Pity System
 
 - Slot 5: 90% chance ★★, 10% chance ★★★
+
+### Foil Distribution
+
+- Pack rolls once for foil chance (based on Foil Chance upgrade level, max 90%)
+- If successful, exactly ONE random card in the pack becomes foil
+- Maximum one foil per pack regardless of chance percentage
 
 ### Pack Opening Animation
 
@@ -578,18 +586,56 @@ If player has 0 cards and cannot afford a pack, a free pack is automatically gra
 
 ## Upgrades
 
+### Upgrade Philosophy
+
+Upgrades are divided into three tiers based on impact and cost scaling:
+
+- **Minor Upgrades**: Incremental percentage bonuses, cheap and frequently purchased
+- **Average Upgrades**: Steady progression toward meaningful caps, moderate cost growth
+- **Major Upgrades**: Significant gameplay-changing effects, expensive milestones
+
 ### Available Upgrades
 
-All upgrades available from game start. All upgrades cost 100 × 10^level.
+| Upgrade | Type | Effect | Cap | Starting Cost | Scaling |
+|---------|------|--------|-----|---------------|---------|
+| Points Boost | Minor | +10% additive to total points | None | 10 | 10 + 50 × level |
+| Collection Boost | Minor | +10% additive to collection points | None | 100 | 100 + 50 × level |
+| Pack Discount | Average | +1% off pack cost | 90% | 1,000 | 1000 × (level+1)² |
+| Foil Chance | Average | +1% foil chance per pack | 90% | 1,000 | 1000 × (level+1)² |
+| Draw Speed | Major | Halves draw cooldown | 0.5s (5 levels) | 100 | 100 × 10^level |
+| Foil Bonus | Major | Doubles foil point multiplier | 100× (6 levels) | 10,000 | 1000 × 10^(level+1) |
 
-| Upgrade | Effect | Max Level | Progression |
-|---------|--------|-----------|-------------|
-| Points Doubler | Multiplies total point generation | Unlimited | 1×→2×→4×→8×... (2^level) |
-| Draw Speed | Reduces draw cooldown | 4 | 10s→5s→2.5s→1.25s→0.5s |
-| Pack Discount | Divides pack cost | Unlimited | ÷1→÷2→÷4→÷8... (2^level) |
-| Collection Doubler | Multiplies collection point generation | Unlimited | 1×→2×→4×→8×... (2^level) |
-| Foil Chance | Chance for foil cards in packs | 5 | 0%→5%→10%→15%→20%→25% |
-| Foil Bonus | Foil point multiplier | 4 | 2×→3×→4×→5× |
+### Upgrade Details
+
+**Points Boost (Minor)**
+- Effect: Multiplies total point income by (1.0 + level × 0.1)
+- Level 0: 100% → Level 10: 200% → Level 20: 300%
+- Cost examples: 10, 60, 110, 160, 210...
+
+**Collection Boost (Minor)**
+- Effect: Multiplies collection point income by (1.0 + level × 0.1)
+- Level 0: 100% → Level 10: 200% → Level 20: 300%
+- Cost examples: 100, 150, 200, 250, 300...
+
+**Pack Discount (Average)**
+- Effect: Reduces pack cost by level %
+- Level 10: 10% off → Level 50: 50% off → Level 90: 90% off (MAX)
+- Cost examples: 1K, 4K, 9K, 16K, 25K...
+
+**Foil Chance (Average)**
+- Effect: level % chance for one foil card per pack
+- Level 10: 10% → Level 50: 50% → Level 90: 90% (MAX)
+- Cost examples: 1K, 4K, 9K, 16K, 25K...
+
+**Draw Speed (Major)**
+- Effect: Draw cooldown = 10s / 2^level (minimum 0.5s)
+- Level 0: 10s → Level 1: 5s → Level 2: 2.5s → Level 3: 1.25s → Level 4: 0.625s → Level 5: 0.5s (MAX)
+- Cost: 100, 1K, 10K, 100K, 1M
+
+**Foil Bonus (Major)**
+- Effect: Foil cards generate 2^(level+1) × points (capped at 100×)
+- Level 0: 2× → Level 1: 4× → Level 2: 8× → Level 3: 16× → Level 4: 32× → Level 5: 64× → Level 6: 100× (MAX)
+- Cost: 10K, 100K, 1M, 10M, 100M, 1B
 
 ### Upgrade Display Format
 
@@ -601,39 +647,31 @@ Description: current value → next value
 
 Example:
 ```
-Collection Doubler - 1K
-Collection points x2 -> x4
+Collection Boost - 150
++0% -> +10% collection points
 ```
 
 When maxed:
 ```
 Foil Chance - MAX
-25% chance for foil cards
+90% foil chance per pack
 ```
-
-### Cost Display
-
-Costs are displayed using abbreviated notation without decimals:
-- Under 1,000: exact number (e.g., "100")
-- 1,000+: "1K", "10K", "100K"
-- 1,000,000+: "1M", "10M", "100M"
-- 1,000,000,000+: "1B", "10B"
-- 1,000,000,000,000+: "1T", "10T"
-
-### Upgrade Costs
-
-All upgrades use the same cost formula:
-```
-Cost = 100 × 10^level
-```
-
-Level 0: 100, Level 1: 1K, Level 2: 10K, Level 3: 100K, Level 4: 1M, etc.
 
 ### Button States
 
 - **Affordable**: Normal button style, clickable
-- **Can't Afford**: Disabled style, no focus mode (clicking does nothing)
-- **Maxed**: Pressed/pushed-in style, no focus mode, no hover change
+- **Can't Afford**: Disabled style, shows progress bar at bottom
+- **Maxed**: Pressed/pushed-in style, no progress bar
+
+### Progress Bar
+
+Each upgrade button displays a progress bar showing how close the player is to affording it:
+
+- **Position**: Bottom of button, inside button bounds
+- **Style**: Semi-transparent white fill on transparent background
+- **Height**: 4 pixels
+- **Corners**: Rounded on bottom-left and bottom-right to match button contour
+- **Visibility**: Hidden when upgrade is affordable or maxed
 
 ---
 
@@ -716,6 +754,7 @@ Always visible with "UPGRADES" header (not collapsible).
 Each upgrade is a single button containing:
 - Line 1: `Name - Cost` (or `Name - MAX` when maxed)
 - Line 2: Description with current → next value
+- Progress bar at bottom (when not affordable and not maxed)
 
 ### Debug Panel
 
@@ -786,7 +825,7 @@ Complete your collection to win!
 
 | Script | Purpose |
 |--------|---------|
-| `game_state.gd` | Core game logic, save/load, point calculation (hand + collection), autoload |
+| `game_state.gd` | Core game logic, save/load, point calculation, upgrade costs/effects |
 | `main.gd` | Scene orchestration, UI setup, submission flow |
 | `card_factory.gd` | Card creation, point value calculation (Form × Rank) |
 | `card_display.gd` | Unified card rendering with gradients, plate shaders, foil overlay |
@@ -801,7 +840,7 @@ Complete your collection to win!
 | `pack_opening.gd` | Pack opening animation |
 | `deck_viewer.gd` | Collection viewer popup with fixed headers and flip animation |
 | `collection_panel.gd` | Collection panel with rate display and submit functionality |
-| `upgrades_panel.gd` | Upgrade display and purchase |
+| `upgrades_panel.gd` | Upgrade display, purchase, and progress bar management |
 | `unlock_popup.gd` | New form/species unlock popup |
 | `final_form_popup.gd` | Final form submission popup |
 | `win_screen.gd` | Win screen with credits/reset |
@@ -844,7 +883,7 @@ Card = {
 ```gdscript
 MAX_NORMAL_RANK = 4      # Highest rank before MAX (★★★★)
 MAX_CARD_RANK = 5        # MAX cards are rank 5
-COLLECTION_POINTS_PER_MAX = 100  # Points per submitted card per tick
+COLLECTION_POINTS_PER_MAX = 10  # Points per submitted card per tick
 STARTING_SPECIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # MIDs 001-010
 ```
 
@@ -862,7 +901,7 @@ STARTING_SPECIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # MIDs 001-010
 
 ### Save Version
 
-**Version "0.6.0"** - String format version, foil inheritance system, housekeeping cleanup
+**Version "0.6.1"** - Balance pass: revised upgrade system, one foil per pack, progress bar UI
 
 ---
 
@@ -870,12 +909,9 @@ STARTING_SPECIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # MIDs 001-010
 
 ### Balance Questions
 
-- Pack cost scaling (currently linear with collection value)
-- Foil chance/bonus progression balance
-- Collection points balance (100 per MAX appropriate?)
-- How long should full completion take? (123 forms across 59 species)
-- Species unlock pacing (is 10 starting species right?)
-- Points Doubler vs Collection Doubler late-game balance
+- Is 8-12 hour completion time appropriate?
+- Late-game pacing once Pack Discount reaches 90%
+- Foil Bonus level 6 (1B cost) as post-game trophy - too extreme?
 
 ### UX Questions
 
@@ -890,31 +926,24 @@ STARTING_SPECIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # MIDs 001-010
 - Offline progress
 - Prestige system
 
-### Resolved in v4.11
+### Resolved in v0.6.1
 
-- Foil system redesigned: foils only from packs, inheritance on merge
+- Complete upgrade system rebalance:
+  - Points/Collection changed from 2× doubling to +10% additive
+  - Pack Discount/Foil Chance capped at 90% instead of 100%
+  - Draw Speed starts at 100, scales ×10 per level
+  - Foil Bonus starts at 10K, caps at 100× (6 levels)
+- One foil maximum per pack (random slot selection)
+- Progress bar UI on upgrade buttons showing cost progress
+- Adjusted starting costs: Points=10, Collection=100, Draw Speed=100
+
+### Resolved in v0.6.0
+
+- Foil system: foils only from packs, inheritance on merge
 - MAX cards are always foil
 - Foil overlay only affects background + sprite (not plates)
-- Per-instance foil animation randomization (±10% speed, random time offset)
-- Foil shader preserved during drag/drop (no jarring restarts)
-- Drag preview centered on cursor
-- Slot card display only recreates when card data actually changes
-- SAVE_VERSION changed to string format "0.6.0"
-- Removed dead code (rank_colors, rank_backgrounds, rank_shaders arrays)
-- Fixed card back reference to card_back_CCS.png
-
-### Resolved in v4.10 and earlier
-
-- Collection now generates 100 points per submitted MAX card per tick
-- Added Collection Doubler upgrade (replaces Critical Merge)
-- Simplified all upgrade costs to 100 × 10^level
-- Removed Critical Merge mechanic entirely
-- Changed point formula from Form² × Rank to Form × Rank
-- Stars are now always gold regardless of rank (plates still use rank colors)
-- Reduced ranks from 10 to 5 (★, ★★, ★★★, ★★★★, MAX)
-- Implemented species gradient backgrounds
-- Star icons for rank display
-- Rank-specific plate styling with shaders for ★★★★ and MAX
+- Per-instance foil animation randomization
+- SAVE_VERSION changed to string format
 
 ### Files to Delete (Housekeeping)
 
@@ -931,5 +960,5 @@ Keep these shaders:
 
 ---
 
-*Version: 0.6.0*  
+*Version: 0.6.1*  
 *Reflects implemented state as of December 2025*

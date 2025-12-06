@@ -37,11 +37,17 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="PointsMult" type="Button" parent="VBox/Content"]
+[node name="PointsMod" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Points Doubler"
+text = "Points Boost"
+
+[node name="CollectionMod" type="Button" parent="VBox/Content"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
+text = "Collection Boost"
 
 [node name="DrawSpeed" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
@@ -54,12 +60,6 @@ custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
 text = "Pack Discount"
-
-[node name="CollectionMult" type="Button" parent="VBox/Content"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-theme_override_font_sizes/font_size = 10
-text = "Collection Doubler"
 
 [node name="FoilChance" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
