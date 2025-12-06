@@ -26,7 +26,7 @@ func _create_max_card() -> void:
 	for mid in MonsterRegistry.get_all_mids():
 		var unlocked_form = GameState.get_unlocked_form(mid)
 		if not GameState.is_form_submitted(mid, unlocked_form):
-			var max_card = CardFactory.create_max_card(mid, unlocked_form, false)
+			var max_card = CardFactory.create_max_card(mid, unlocked_form)
 			GameState.deck.append(max_card)
 			GameState.deck_changed.emit()
 			return

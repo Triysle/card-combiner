@@ -49,21 +49,29 @@ var foil_content_container: Control
 var card_data: Dictionary = {}
 var is_card_back: bool = false
 
+# Per-instance randomization for foil effect
+var _foil_time_offset: float = 0.0
+var _foil_speed_multiplier: float = 1.0
+
 func _ready() -> void:
 	_setup_nodes()
 	set_process(false)  # Only enable when shader needs time updates
+	
+	# Randomize foil timing per instance
+	_foil_time_offset = randf() * 10.0  # Random start point in the animation
+	_foil_speed_multiplier = randf_range(0.8, 1.0)  # Vary speed
 
 func _process(delta: float) -> void:
 	# Update shader time uniforms for animations
 	_update_shader_time(name_plate, delta)
 	_update_shader_time(info_plate, delta)
 	
-	# Update foil shader time if active
+	# Update foil shader time if active (with per-instance variation)
 	if foil_overlay and foil_overlay.material is ShaderMaterial:
 		var mat = foil_overlay.material as ShaderMaterial
 		var current_time = mat.get_shader_parameter("time")
 		if current_time != null:
-			mat.set_shader_parameter("time", current_time + delta)
+			mat.set_shader_parameter("time", current_time + delta * _foil_speed_multiplier)
 
 func _update_shader_time(node: Control, delta: float) -> void:
 	if node and node.material is ShaderMaterial:
@@ -155,18 +163,14 @@ func _setup_nodes() -> void:
 	rank_container.add_theme_constant_override("separation", 1)
 	add_child(rank_container)
 	
-	# Foil overlay (shimmer effect layer - between sprite and plates)
+# Foil overlay (shimmer effect layer - inside foil_content_container, after sprite)
 	foil_overlay = ColorRect.new()
 	foil_overlay.name = "FoilOverlay"
 	foil_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	foil_overlay.offset_left = 3
-	foil_overlay.offset_top = 3
-	foil_overlay.offset_right = -3
-	foil_overlay.offset_bottom = -3
 	foil_overlay.color = Color.TRANSPARENT
 	foil_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	foil_overlay.visible = false
-	add_child(foil_overlay)
+	foil_content_container.add_child(foil_overlay)  # Add to foil container, not main panel
 	
 	# Card back container
 	card_back_container = CenterContainer.new()
@@ -393,10 +397,17 @@ func _setup_gradient_background(base_color: Color, secondary_color: Color, gradi
 
 func _setup_foil_effect(is_foil: bool) -> void:
 	if is_foil:
+		# Check if we already have a foil shader running - don't restart it
+		if foil_overlay.visible and foil_overlay.material is ShaderMaterial:
+			var existing_shader = (foil_overlay.material as ShaderMaterial).shader
+			if existing_shader == FOIL_SHADER:
+				return  # Already running, don't restart
+		
+		# Create new shader material
 		var shader_mat = ShaderMaterial.new()
 		shader_mat.shader = FOIL_SHADER
-		shader_mat.set_shader_parameter("time", 0.0)
-		shader_mat.set_shader_parameter("shimmer_speed", 0.6)
+		shader_mat.set_shader_parameter("time", _foil_time_offset)
+		shader_mat.set_shader_parameter("shimmer_speed", 0.6 * _foil_speed_multiplier)
 		shader_mat.set_shader_parameter("shimmer_intensity", 0.35)
 		shader_mat.set_shader_parameter("sparkle_density", 0.96)
 		foil_overlay.material = shader_mat
@@ -565,8 +576,8 @@ func setup_collection(mid: int, form: int, state: String, card_size: Vector2) ->
 			_show_collection_not_collected()
 
 func _show_collection_submitted(mid: int, form: int) -> void:
-	# Show as a MAX card with green border
-	var max_card = CardFactory.create_max_card(mid, form, false)
+	# Show as a MAX card with green border (MAX is always foil)
+	var max_card = CardFactory.create_max_card(mid, form)
 	setup(max_card, false)
 	
 	# Override border with green to indicate submitted

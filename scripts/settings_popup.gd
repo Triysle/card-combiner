@@ -18,7 +18,7 @@ func _ready() -> void:
 	reset_button.pressed.connect(_on_reset_pressed)
 	credits_button.pressed.connect(_on_credits_pressed)
 	
-	version_label.text = "Version %d" % GameState.SAVE_VERSION
+	version_label.text = "Version %s" % GameState.SAVE_VERSION
 	
 	# Create reset confirmation dialog
 	reset_confirm_dialog = ConfirmationDialog.new()

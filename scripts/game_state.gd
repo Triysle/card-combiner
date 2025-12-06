@@ -23,7 +23,7 @@ const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: int = 9  # Added collection points, removed critical merge
+const SAVE_VERSION: String = "0.6.0"
 const STARTING_SPECIES_COUNT: int = 10  # How many species unlocked at game start
 
 # Tick timer
@@ -308,18 +308,23 @@ func merge_cards(card_a: Dictionary, card_b: Dictionary) -> Dictionary:
 	var form = card_a.form
 	var rank = card_a.rank
 	
-	# Rank 4 + Rank 4 = MAX
+	# Foil inheritance: result is foil if either parent is foil
+	# Foils only come from packs - merging non-foils never creates foil
+	var is_foil = card_a.get("is_foil", false) or card_b.get("is_foil", false)
+	
+	# Rank 4 + Rank 4 = MAX (always foil regardless)
 	if rank == MAX_NORMAL_RANK:
-		return CardFactory.create_max_card(mid, form, _roll_foil())
+		return CardFactory.create_max_card(mid, form)
 	
-	# Normal merge: +1 rank
+	# Normal merge: +1 rank, inherits foil from parents
 	var new_rank = rank + 1
-	
-	return CardFactory.create_card(mid, form, new_rank, _roll_foil())
+	return CardFactory.create_card(mid, form, new_rank, is_foil)
 
 func _roll_foil() -> bool:
+	## Roll for foil chance based on upgrade level (5% per level, max 25%)
+	## Used only for pack generation
 	var foil_level = upgrade_levels.get(UpgradeType.FOIL_CHANCE, 0)
-	var foil_chance = foil_level * 0.05  # 5% per level, max 25%
+	var foil_chance = foil_level * 0.05
 	return randf() < foil_chance
 
 func get_merge_failure_reason(result: MergeResult) -> String:
@@ -676,8 +681,10 @@ func load_game() -> bool:
 	if config.load(SAVE_PATH) != OK:
 		return false
 	
-	var version = config.get_value("save", "version", 0)
-	if version != SAVE_VERSION:
+	var version = config.get_value("save", "version", "")
+	
+	# Handle version compatibility
+	if not _is_save_compatible(version):
 		return false
 	
 	points = config.get_value("save", "points", 0)
@@ -702,6 +709,13 @@ func load_game() -> bool:
 	collection_changed.emit()
 	
 	return true
+
+func _is_save_compatible(version) -> bool:
+	# Accept string version "0.6.0" format
+	if version is String:
+		return version == SAVE_VERSION
+	# Reject old integer versions (incompatible format)
+	return false
 
 func reset_game() -> void:
 	var dir = DirAccess.open("user://")

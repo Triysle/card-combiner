@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bicwqsiip7o7j" path="res://scripts/deck_pile.gd" id="1_deck"]
 [ext_resource type="Texture2D" uid="uid://dnqeejx0qc062" path="res://assets/UI/slot_bg.svg" id="1_iv2pi"]
-[ext_resource type="Texture2D" uid="uid://dfs3hnagihw4f" path="res://assets/cardbacks/card_back_CCLOGOS.png" id="3_cardback"]
+[ext_resource type="Texture2D" uid="uid://6j72ylvx0p4s" path="res://assets/cardbacks/card_back_CCS.png" id="3_cardback"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_slot"]
 texture = ExtResource("1_iv2pi")

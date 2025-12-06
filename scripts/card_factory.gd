@@ -22,13 +22,14 @@ func create_card(mid: int, form: int, rank: int = 1, is_foil: bool = false) -> D
 		"is_foil": is_foil
 	}
 
-func create_max_card(mid: int, form: int, is_foil: bool = false) -> Dictionary:
+func create_max_card(mid: int, form: int) -> Dictionary:
+	## MAX cards are always foil - they're the pinnacle of each form
 	return {
 		"mid": mid,
 		"form": form,
 		"rank": 5,  # MAX cards are rank 5
 		"is_max": true,
-		"is_foil": is_foil
+		"is_foil": true  # MAX is always foil
 	}
 
 # === CARD VALIDATION ===

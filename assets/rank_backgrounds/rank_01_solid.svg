@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="160" viewBox="0 0 120 160">
-  <!-- Clean solid background - simplest rank -->
-  <rect width="120" height="160" fill="#e8e8e8"/>
-  <!-- Subtle inner glow/border -->
-  <rect x="4" y="4" width="112" height="152" fill="none" stroke="#d8d8d8" stroke-width="2" rx="4"/>
-</svg>

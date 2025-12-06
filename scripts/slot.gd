@@ -80,8 +80,11 @@ func _update_display() -> void:
 		_update_card_display()
 
 func _update_card_display() -> void:
-	# Remove existing card display
+	# Check if card data actually changed - avoid recreating unnecessarily
 	if _card_display:
+		var existing_data = _card_display.card_data
+		if existing_data == card_data:
+			return  # Same card, don't recreate
 		_card_display.queue_free()
 		_card_display = null
 	
@@ -147,8 +150,14 @@ func play_merge_animation() -> void:
 func _create_drag_preview(card: Dictionary) -> Control:
 	var card_display_scene = preload("res://scenes/card_display.tscn")
 	var preview = card_display_scene.instantiate()
-	preview.setup(card, Vector2(100, 130))
-	return preview
+	var preview_size = Vector2(100, 130)
+	preview.setup(card, preview_size)
+	
+	# Wrap in container to allow offset positioning
+	var container = Control.new()
+	container.add_child(preview)
+	preview.position = -preview_size / 2
+	return container
 
 func _get_drag_data(_pos: Vector2) -> Variant:
 	if CardFactory.is_empty_card(card_data):

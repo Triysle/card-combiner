@@ -49,8 +49,14 @@ func _update_card_display(card: Dictionary) -> void:
 func _create_drag_preview(card: Dictionary) -> Control:
 	var card_display_scene = preload("res://scenes/card_display.tscn")
 	var preview = card_display_scene.instantiate()
-	preview.setup(card, Vector2(100, 130))
-	return preview
+	var preview_size = Vector2(100, 130)
+	preview.setup(card, preview_size)
+	
+	# Wrap in container to allow offset positioning
+	var container = Control.new()
+	container.add_child(preview)
+	preview.position = -preview_size / 2
+	return container
 
 func _get_drag_data(_pos: Vector2) -> Variant:
 	var card = GameState.get_top_discard()
