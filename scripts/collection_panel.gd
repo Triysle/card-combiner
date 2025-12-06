@@ -1,7 +1,7 @@
 # scripts/collection_panel.gd
 extends PanelContainer
 
-## Collection panel - shows collection viewer button and submit slot
+## Collection panel - shows collection viewer button, rate display, and submit slot
 
 signal open_requested
 signal submission_requested(card: Dictionary)  # main.gd handles the flow
@@ -9,6 +9,7 @@ signal submission_requested(card: Dictionary)  # main.gd handles the flow
 const CARD_DISPLAY_SCENE = preload("res://scenes/card_display.tscn")
 
 @onready var open_button: Button = %OpenButton
+@onready var rate_label: Label = %RateLabel
 @onready var slot: Panel = %Slot
 @onready var empty_label: Label = %EmptyLabel
 @onready var card_container: Control = %CardContainer
@@ -21,7 +22,9 @@ func _ready() -> void:
 	add_button.pressed.connect(_on_add_pressed)
 	slot.set_drag_forwarding(_get_drag_data, _can_drop_data, _drop_data)
 	GameState.collection_changed.connect(_update_display)
+	GameState.tick.connect(_update_rate_display)
 	_update_display()
+	_update_rate_display()
 
 func _on_open_pressed() -> void:
 	open_requested.emit()
@@ -48,6 +51,22 @@ func _update_display() -> void:
 		empty_label.visible = true
 		card_container.visible = false
 		add_button.disabled = true
+	
+	_update_rate_display()
+
+func _update_rate_display() -> void:
+	var rate = GameState.get_collection_points_rate()
+	rate_label.text = "+%s/s" % _format_number(rate)
+
+func _format_number(value: int) -> String:
+	if value >= 1000000000:
+		return "%.1fB" % (value / 1000000000.0)
+	elif value >= 1000000:
+		return "%.1fM" % (value / 1000000.0)
+	elif value >= 1000:
+		return "%.1fK" % (value / 1000.0)
+	else:
+		return "%d" % value
 
 func _get_drag_data(_pos: Vector2) -> Variant:
 	if not CardFactory.is_valid_card(current_card):

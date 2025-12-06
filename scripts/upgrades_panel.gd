@@ -13,7 +13,7 @@ const UPGRADE_NODES: Dictionary = {
 	GameState.UpgradeType.POINTS_MULT: "PointsMult",
 	GameState.UpgradeType.DRAW_SPEED: "DrawSpeed",
 	GameState.UpgradeType.PACK_DISCOUNT: "PackDiscount",
-	GameState.UpgradeType.CRITICAL_MERGE: "CriticalMerge",
+	GameState.UpgradeType.COLLECTION_MULT: "CollectionMult",
 	GameState.UpgradeType.FOIL_CHANCE: "FoilChance",
 	GameState.UpgradeType.FOIL_BONUS: "FoilBonus"
 }
@@ -22,7 +22,7 @@ const UPGRADE_NAMES: Dictionary = {
 	GameState.UpgradeType.POINTS_MULT: "Points Doubler",
 	GameState.UpgradeType.DRAW_SPEED: "Draw Speed",
 	GameState.UpgradeType.PACK_DISCOUNT: "Pack Discount",
-	GameState.UpgradeType.CRITICAL_MERGE: "Critical Merge",
+	GameState.UpgradeType.COLLECTION_MULT: "Collection Doubler",
 	GameState.UpgradeType.FOIL_CHANCE: "Foil Chance",
 	GameState.UpgradeType.FOIL_BONUS: "Foil Bonus"
 }
@@ -100,12 +100,12 @@ func _get_description(upgrade_type: GameState.UpgradeType, level: int, maxed: bo
 				return "Pack cost divided by %d" % current
 			return "Pack cost divided by %d -> %d" % [current, next]
 		
-		GameState.UpgradeType.CRITICAL_MERGE:
-			var current = level * 2
-			var next = (level + 1) * 2
+		GameState.UpgradeType.COLLECTION_MULT:
+			var current = int(pow(2, level))
+			var next = int(pow(2, level + 1))
 			if maxed:
-				return "%d%% chance for +2 ranks" % current
-			return "%d%% -> %d%% chance for +2 ranks" % [current, next]
+				return "Collection points x%d" % current
+			return "Collection points x%d -> x%d" % [current, next]
 		
 		GameState.UpgradeType.FOIL_CHANCE:
 			var current = level * 5

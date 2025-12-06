@@ -23,7 +23,7 @@ const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: int = 8  # Bumped for rank reduction + foil system
+const SAVE_VERSION: int = 9  # Added collection points, removed critical merge
 const STARTING_SPECIES_COUNT: int = 10  # How many species unlocked at game start
 
 # Tick timer
@@ -34,7 +34,7 @@ enum UpgradeType {
 	POINTS_MULT,
 	DRAW_SPEED,
 	PACK_DISCOUNT,
-	CRITICAL_MERGE,
+	COLLECTION_MULT,
 	FOIL_CHANCE,
 	FOIL_BONUS
 }
@@ -157,17 +157,36 @@ func spend_points(amount: int) -> bool:
 	return false
 
 func calculate_points_per_tick() -> int:
-	var total = 0
-	for card in hand:
-		if CardFactory.is_valid_card(card):
-			total += get_card_points_with_foil(card)
+	var hand_total = get_hand_points_rate()
+	var collection_total = get_collection_points_rate()
 	
-	# Apply points multiplier
+	# Apply points multiplier to combined total
 	var mult_level = upgrade_levels.get(UpgradeType.POINTS_MULT, 0)
+	var total = hand_total + collection_total
 	if mult_level > 0:
 		total *= int(pow(2, mult_level))
 	
 	return total
+
+## Get points per tick from hand cards only (before global multiplier)
+func get_hand_points_rate() -> int:
+	var total = 0
+	for card in hand:
+		if CardFactory.is_valid_card(card):
+			total += get_card_points_with_foil(card)
+	return total
+
+## Get points per tick from collection (before global multiplier)
+func get_collection_points_rate() -> int:
+	var submitted_count = get_submitted_form_count()
+	var base_rate = 100 * submitted_count
+	
+	# Apply collection multiplier
+	var coll_level = upgrade_levels.get(UpgradeType.COLLECTION_MULT, 0)
+	if coll_level > 0:
+		base_rate *= int(pow(2, coll_level))
+	
+	return base_rate
 
 ## Calculate points for a single card including foil bonus (but not global multiplier)
 func get_card_points_with_foil(card: Dictionary) -> int:
@@ -293,14 +312,8 @@ func merge_cards(card_a: Dictionary, card_b: Dictionary) -> Dictionary:
 	if rank == MAX_NORMAL_RANK:
 		return CardFactory.create_max_card(mid, form, _roll_foil())
 	
-	# Check for critical merge (+2 ranks instead of +1)
-	var crit_level = upgrade_levels.get(UpgradeType.CRITICAL_MERGE, 0)
-	var crit_chance = crit_level * 0.02  # 2% per level, max 10%
-	var is_critical = randf() < crit_chance
-	var rank_increase = 2 if is_critical else 1
-	
-	# Critical cannot create MAX - caps at rank 4
-	var new_rank = mini(rank + rank_increase, MAX_NORMAL_RANK)
+	# Normal merge: +1 rank
+	var new_rank = rank + 1
 	
 	return CardFactory.create_card(mid, form, new_rank, _roll_foil())
 
@@ -572,25 +585,18 @@ func get_upgrade_level(type: UpgradeType) -> int:
 func get_upgrade_cost(type: UpgradeType) -> int:
 	var level = get_upgrade_level(type)
 	
-	match type:
-		UpgradeType.POINTS_MULT:
-			return int(100 * pow(10, level))
-		UpgradeType.DRAW_SPEED:
-			if level >= 4: return -1
-			return int(100 * pow(10, level))
-		UpgradeType.PACK_DISCOUNT:
-			return int(1000 * pow(10, level))
-		UpgradeType.CRITICAL_MERGE:
-			if level >= 5: return -1
-			return int(10000 * pow(10, level))
-		UpgradeType.FOIL_CHANCE:
-			if level >= 5: return -1  # Max level 5 (25%)
-			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B, 1T
-		UpgradeType.FOIL_BONUS:
-			if level >= 4: return -1  # Max level 4 (5x)
-			return int(10000 * pow(100, level))  # 10k, 1M, 100M, 10B
+	# Draw Speed caps at level 4
+	if type == UpgradeType.DRAW_SPEED and level >= 4:
+		return -1
+	# Foil Chance caps at level 5
+	if type == UpgradeType.FOIL_CHANCE and level >= 5:
+		return -1
+	# Foil Bonus caps at level 4
+	if type == UpgradeType.FOIL_BONUS and level >= 4:
+		return -1
 	
-	return -1
+	# All upgrades: 100 base × 10 per level
+	return int(100 * pow(10, level))
 
 func can_buy_upgrade(type: UpgradeType) -> bool:
 	var cost = get_upgrade_cost(type)
@@ -611,7 +617,7 @@ func get_upgrade_name(type: UpgradeType) -> String:
 		UpgradeType.POINTS_MULT: return "Points x2"
 		UpgradeType.DRAW_SPEED: return "Draw Speed"
 		UpgradeType.PACK_DISCOUNT: return "Pack Discount"
-		UpgradeType.CRITICAL_MERGE: return "Critical Merge"
+		UpgradeType.COLLECTION_MULT: return "Collection x2"
 		UpgradeType.FOIL_CHANCE: return "Foil Chance"
 		UpgradeType.FOIL_BONUS: return "Foil Bonus"
 	return "Unknown"
@@ -634,11 +640,10 @@ func get_upgrade_description(type: UpgradeType) -> String:
 			var discount = int(pow(2, level))
 			var next = int(pow(2, level + 1))
 			return "1/%d -> 1/%d cost" % [discount, next]
-		UpgradeType.CRITICAL_MERGE:
-			var chance = level * 2
-			if level >= 5:
-				return "%d%% (MAX)" % chance
-			return "%d%% -> %d%%" % [chance, chance + 2]
+		UpgradeType.COLLECTION_MULT:
+			var mult = int(pow(2, level))
+			var next_mult = int(pow(2, level + 1))
+			return "%dx -> %dx" % [mult, next_mult]
 		UpgradeType.FOIL_CHANCE:
 			var chance = level * 5
 			if level >= 5:

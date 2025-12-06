@@ -13,22 +13,22 @@ func _ready() -> void:
 
 # === CARD CREATION ===
 
-func create_card(mid: int, form: int, rank: int = 1, foil: bool = false) -> Dictionary:
+func create_card(mid: int, form: int, rank: int = 1, is_foil: bool = false) -> Dictionary:
 	return {
 		"mid": mid,
 		"form": form,
 		"rank": clampi(rank, 1, 4),  # 1-4 for normal cards
 		"is_max": false,
-		"is_foil": foil
+		"is_foil": is_foil
 	}
 
-func create_max_card(mid: int, form: int, foil: bool = false) -> Dictionary:
+func create_max_card(mid: int, form: int, is_foil: bool = false) -> Dictionary:
 	return {
 		"mid": mid,
 		"form": form,
 		"rank": 5,  # MAX cards are rank 5
 		"is_max": true,
-		"is_foil": foil
+		"is_foil": is_foil
 	}
 
 # === CARD VALIDATION ===
@@ -94,8 +94,8 @@ func get_card_points_value(card: Dictionary) -> int:
 	if is_empty_card(card):
 		return 0
 	var form = card.form
-	# Point value = form² × rank (1-5)
-	return (form * form) * card.rank
+	# Point value = form × rank (1-5)
+	return form * card.rank
 
 # === CARD COLORS ===
 

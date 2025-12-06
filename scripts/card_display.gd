@@ -99,19 +99,6 @@ func _setup_nodes() -> void:
 	monster_sprite.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	foil_content_container.add_child(monster_sprite)
 	
-	# Foil overlay (shimmer effect - inside foil container, on top of bg and sprite)
-	foil_overlay = ColorRect.new()
-	foil_overlay.name = "FoilOverlay"
-	foil_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
-	foil_overlay.offset_left = 3
-	foil_overlay.offset_top = 3
-	foil_overlay.offset_right = -3
-	foil_overlay.offset_bottom = -3
-	foil_overlay.color = Color.TRANSPARENT
-	foil_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	foil_overlay.visible = false
-	foil_content_container.add_child(foil_overlay)
-	
 	# Name plate (ribbon at top) - outside foil container
 	name_plate = TextureRect.new()
 	name_plate.name = "NamePlate"
@@ -167,6 +154,19 @@ func _setup_nodes() -> void:
 	rank_container.alignment = BoxContainer.ALIGNMENT_END
 	rank_container.add_theme_constant_override("separation", 1)
 	add_child(rank_container)
+	
+	# Foil overlay (shimmer effect layer - between sprite and plates)
+	foil_overlay = ColorRect.new()
+	foil_overlay.name = "FoilOverlay"
+	foil_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	foil_overlay.offset_left = 3
+	foil_overlay.offset_top = 3
+	foil_overlay.offset_right = -3
+	foil_overlay.offset_bottom = -3
+	foil_overlay.color = Color.TRANSPARENT
+	foil_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foil_overlay.visible = false
+	add_child(foil_overlay)
 	
 	# Card back container
 	card_back_container = CenterContainer.new()
@@ -396,17 +396,14 @@ func _setup_foil_effect(is_foil: bool) -> void:
 		var shader_mat = ShaderMaterial.new()
 		shader_mat.shader = FOIL_SHADER
 		shader_mat.set_shader_parameter("time", 0.0)
-		shader_mat.set_shader_parameter("shimmer_speed", 0.4)
-		shader_mat.set_shader_parameter("rainbow_intensity", 0.35)  # Increased for visibility
-		shader_mat.set_shader_parameter("shimmer_sharpness", 3.0)
+		shader_mat.set_shader_parameter("shimmer_speed", 0.6)
+		shader_mat.set_shader_parameter("shimmer_intensity", 0.35)
+		shader_mat.set_shader_parameter("sparkle_density", 0.96)
 		foil_overlay.material = shader_mat
 		foil_overlay.visible = true
-		foil_overlay.color = Color.WHITE  # Ensure ColorRect has a color to work with
-		set_process(true)  # Ensure _process runs for time updates
 	else:
 		foil_overlay.material = null
 		foil_overlay.visible = false
-		foil_overlay.color = Color.TRANSPARENT
 
 func _apply_plate_style(plate: TextureRect, rank: int) -> void:
 	var plate_color = PLATE_COLORS.get(rank, Color.WHITE)
@@ -456,17 +453,13 @@ func _setup_rank_display(rank: int, is_max: bool) -> void:
 			star.custom_minimum_size = Vector2(star_size, star_size)
 			star.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			star.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			# Tint stars based on rank
+			# Stars are always gold
 			star.modulate = _get_star_color(rank)
 			rank_container.add_child(star)
 
-func _get_star_color(rank: int) -> Color:
-	match rank:
-		1: return Color(0.85, 0.55, 0.25)  # Bronze
-		2: return Color(0.75, 0.75, 0.80)  # Silver
-		3: return Color(1.0, 0.85, 0.0)    # Gold
-		4: return Color(0.95, 0.95, 1.0)   # Platinum
-		_: return Color.WHITE
+func _get_star_color(_rank: int) -> Color:
+	# Stars are always gold/yellow regardless of rank
+	return Color(1.0, 0.85, 0.0)
 
 func _apply_border(_is_max: bool) -> void:
 	var border_style = border_frame.get_theme_stylebox("panel").duplicate() as StyleBoxFlat

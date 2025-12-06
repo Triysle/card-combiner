@@ -41,40 +41,34 @@ theme_override_constants/separation = 4
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Points Doubler - 100
-Multiplies points by 1x → 2x"
+text = "Points Doubler"
 
 [node name="DrawSpeed" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Draw Speed - 100
-Draw every 10.0s → 5.0s"
+text = "Draw Speed"
 
 [node name="PackDiscount" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Pack Discount - 1K
-Pack cost divided by 1 → 2"
+text = "Pack Discount"
 
-[node name="CriticalMerge" type="Button" parent="VBox/Content"]
+[node name="CollectionMult" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Critical Merge - 10K
-0% → 10% chance for +2 ranks"
+text = "Collection Doubler"
 
 [node name="FoilChance" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Min Pack Rank - 10K
-Packs drop R1+ → R2+"
+text = "Foil Chance"
 
 [node name="FoilBonus" type="Button" parent="VBox/Content"]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
-text = "Max Pack Rank - 10K
-Packs can drop up to R5 → R6"
+text = "Foil Bonus"
