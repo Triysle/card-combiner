@@ -23,7 +23,7 @@ const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: String = "0.6.2"
+const SAVE_VERSION: String = "0.6.3"
 const STARTING_SPECIES_COUNT: int = 5  # How many species unlocked at game start
 
 # Tick timer
@@ -624,8 +624,8 @@ func get_upgrade_cost(type: UpgradeType) -> int:
 			return 1000 * (level + 1) * (level + 1)
 		
 		UpgradeType.DRAW_SPEED:
-			# Major scaling: 100 * 10^level (exponential, starts at 100)
-			return int(100 * pow(10, level))
+			# Major scaling: 1000 * 10^level (exponential, starts at 1000)
+			return int(100 * pow(100, level))
 		
 		UpgradeType.FOIL_BONUS:
 			# Major scaling: 1000 * 10^(level+1) (exponential, starts at 10,000)
