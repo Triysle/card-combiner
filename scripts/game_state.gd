@@ -2,7 +2,7 @@
 extends Node
 
 ## Game state singleton - manages all game data
-## New progression: submit MAX of form N to unlock form N+1 in packs
+## Progression: Start with 10 species unlocked, unlock more by completing species (MAX all forms)
 
 # ===== SIGNALS =====
 signal points_changed(value: int)
@@ -14,6 +14,7 @@ signal tick()
 signal collection_changed()
 signal game_won()
 signal form_unlocked(mid: int, form: int, card: Dictionary)
+signal species_unlocked(mid: int, card: Dictionary)
 
 # ===== CONSTANTS =====
 const MAX_RANK: int = 9          # Highest normal rank (R9)
@@ -22,7 +23,8 @@ const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: int = 6  # Bumped for new card format
+const SAVE_VERSION: int = 7  # Bumped for species unlock system
+const STARTING_SPECIES_COUNT: int = 10  # How many species unlocked at game start
 
 # Tick timer
 var _tick_timer: Timer
@@ -53,11 +55,15 @@ var discard_pile: Array[Dictionary] = []
 var hand: Array[Dictionary] = []
 var upgrade_levels: Dictionary = {}
 
-# Collection tracking
-var unlocked_forms: Dictionary = {}   # {mid: highest_unlocked_form} - what can drop from packs
-var submitted_forms: Dictionary = {}  # {mid: [form_indices]} - completed forms
-var submit_slot: Dictionary = {}      # Card in submit slot
-var packs_purchased: int = 0          # Track for first free pack
+# Species/Collection tracking
+var unlocked_species: Array[int] = []     # MIDs of species player can access
+var unlocked_forms: Dictionary = {}       # {mid: highest_unlocked_form} - what can drop from packs
+var submitted_forms: Dictionary = {}      # {mid: [form_indices]} - completed forms
+var submit_slot: Dictionary = {}          # Card in submit slot
+var packs_purchased: int = 0              # Track for first free pack
+
+# Track last unlock for UI (cleared after read)
+var _last_unlocked_species_card: Dictionary = {}
 
 # Draw cooldown
 var can_draw: bool = true
@@ -91,14 +97,19 @@ func _init_new_game() -> void:
 	deck.clear()
 	discard_pile.clear()
 	hand.clear()
+	unlocked_species.clear()
 	unlocked_forms.clear()
 	submitted_forms.clear()
 	submit_slot = {}
 	packs_purchased = 0
+	_last_unlocked_species_card = {}
 	
-	# Initialize unlocked forms: all species start with form 1 unlocked
-	for mid in MonsterRegistry.get_all_mids():
-		unlocked_forms[mid] = 1
+	# Initialize unlocked species: first N species by MID
+	var all_mids = MonsterRegistry.get_all_mids()
+	for i in range(mini(STARTING_SPECIES_COUNT, all_mids.size())):
+		var mid = all_mids[i]
+		unlocked_species.append(mid)
+		unlocked_forms[mid] = 1  # Each unlocked species starts with form 1 available
 	
 	# Initialize hand with empty slots
 	var starting_hand_size = get_current_hand_size()
@@ -340,9 +351,11 @@ func buy_pack() -> Array[Dictionary]:
 func _generate_pack() -> Array[Dictionary]:
 	var pack: Array[Dictionary] = []
 	
-	# Get available forms (unlocked but not submitted)
+	# Get available forms (unlocked species + unlocked form + not submitted)
 	var available: Array[Dictionary] = []  # [{mid, form}, ...]
-	for mid in unlocked_forms.keys():
+	for mid in unlocked_species:
+		if mid not in unlocked_forms:
+			continue
 		var unlocked_form = unlocked_forms[mid]
 		var submitted = submitted_forms.get(mid, [])
 		if unlocked_form not in submitted:
@@ -389,7 +402,42 @@ func _roll_rank(min_r: int, max_r: int) -> int:
 	else:
 		return clampi(min_r + randi_range(2, range_size - 1), min_r, max_r)
 
-# ===== COLLECTION & SUBMISSION =====
+# ===== SPECIES & COLLECTION =====
+
+func is_species_unlocked(mid: int) -> bool:
+	return mid in unlocked_species
+
+func get_unlocked_species_count() -> int:
+	return unlocked_species.size()
+
+func is_species_complete(mid: int) -> bool:
+	## Returns true if all forms of this species have been submitted
+	var species = MonsterRegistry.get_species(mid)
+	if not species:
+		return false
+	var form_count = species.get_form_count()
+	var submitted = submitted_forms.get(mid, [])
+	for form in range(1, form_count + 1):
+		if form not in submitted:
+			return false
+	return true
+
+func _get_next_species_to_unlock() -> int:
+	## Find the lowest MID not yet in unlocked_species
+	var all_mids = MonsterRegistry.get_all_mids()
+	for mid in all_mids:
+		if mid not in unlocked_species:
+			return mid
+	return -1  # All species unlocked
+
+func get_last_unlocked_species_card() -> Dictionary:
+	## Get and clear the last unlocked species card (for UI to display)
+	var card = _last_unlocked_species_card
+	_last_unlocked_species_card = {}
+	return card
+
+# ===== FORM TRACKING =====
+
 func is_form_unlocked(mid: int, form: int) -> bool:
 	return unlocked_forms.get(mid, 0) >= form
 
@@ -404,6 +452,8 @@ func get_submitted_form_count() -> int:
 	for mid in submitted_forms.keys():
 		total += submitted_forms[mid].size()
 	return total
+
+# ===== SUBMISSION =====
 
 func set_submit_slot(card: Dictionary) -> void:
 	submit_slot = card
@@ -453,17 +503,38 @@ func confirm_submission() -> bool:
 	# Clear submit slot
 	submit_slot = {}
 	
-	# Unlock next form if not final
-	var unlocked_card: Dictionary = {}
+	# Clear any previous unlock tracking
+	_last_unlocked_species_card = {}
+	
+	# Handle unlocks based on whether this was a final form
 	if not is_final:
+		# Unlock next form of same species
 		var next_form = form + 1
 		unlocked_forms[mid] = next_form
-		unlocked_card = CardFactory.create_card(mid, next_form, 1)
+		var unlocked_card = CardFactory.create_card(mid, next_form, 1)
 		deck.append(unlocked_card)
 		deck.shuffle()
 		deck_changed.emit()
 		
 		form_unlocked.emit(mid, next_form, unlocked_card)
+	else:
+		# Final form submitted - check if we should unlock a new species
+		var next_species = _get_next_species_to_unlock()
+		if next_species > 0:
+			# Unlock the new species
+			unlocked_species.append(next_species)
+			unlocked_forms[next_species] = 1
+			
+			# Create starter card for new species
+			var starter_card = CardFactory.create_card(next_species, 1, 1)
+			deck.append(starter_card)
+			deck.shuffle()
+			deck_changed.emit()
+			
+			# Store for UI to retrieve
+			_last_unlocked_species_card = starter_card
+			
+			species_unlocked.emit(next_species, starter_card)
 	
 	collection_changed.emit()
 	
@@ -613,6 +684,7 @@ func save_game() -> void:
 	config.set_value("save", "discard_pile", discard_pile)
 	config.set_value("save", "hand", hand)
 	config.set_value("save", "upgrade_levels", upgrade_levels)
+	config.set_value("save", "unlocked_species", unlocked_species)
 	config.set_value("save", "unlocked_forms", unlocked_forms)
 	config.set_value("save", "submitted_forms", submitted_forms)
 	config.set_value("save", "packs_purchased", packs_purchased)
@@ -632,6 +704,7 @@ func load_game() -> bool:
 	discard_pile = config.get_value("save", "discard_pile", [])
 	hand = config.get_value("save", "hand", [])
 	upgrade_levels = config.get_value("save", "upgrade_levels", {})
+	unlocked_species = config.get_value("save", "unlocked_species", [])
 	unlocked_forms = config.get_value("save", "unlocked_forms", {})
 	submitted_forms = config.get_value("save", "submitted_forms", {})
 	packs_purchased = config.get_value("save", "packs_purchased", 0)

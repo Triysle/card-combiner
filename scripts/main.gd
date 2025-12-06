@@ -121,13 +121,20 @@ func _on_submission_requested(card: Dictionary) -> void:
 	# Close collection
 	collection_popup.hide()
 	
-	# Show appropriate popup
+	# Show appropriate popup based on what happened
 	if game_won:
 		_show_win_screen()
 	elif is_final:
-		_show_final_form_popup()
+		# Final form - check if a new species was unlocked
+		var unlocked_species_card = GameState.get_last_unlocked_species_card()
+		if CardFactory.is_valid_card(unlocked_species_card):
+			# New species unlocked - show unlock popup with new species' base form
+			_show_unlock_popup(unlocked_species_card)
+		else:
+			# No new species (all 59 unlocked) - just show progress
+			_show_final_form_popup()
 	else:
-		# Get the unlocked card from GameState (it was added to deck)
+		# Non-final form - show next form unlock
 		var next_form = form + 1
 		var unlocked_card = CardFactory.create_card(mid, next_form, 1)
 		_show_unlock_popup(unlocked_card)

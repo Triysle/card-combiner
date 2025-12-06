@@ -30,7 +30,7 @@ func open(card: Dictionary) -> void:
 	unlocked_card = card
 	
 	var card_name = CardFactory.get_card_name(card)
-	title_label.text = "Unlocked New Form: %s!" % card_name
+	title_label.text = "Unlocked %s!" % card_name
 	
 	_create_card_display()
 	_animate_opening()

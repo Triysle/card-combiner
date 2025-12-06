@@ -4,6 +4,7 @@ extends PopupPanel
 ## Collection Viewer - nearly fullscreen grid showing all species and forms
 ## Uses actual CardDisplay instances for consistent visuals
 ## Rows = species (MID), Columns = forms (I, II, III, etc.)
+## Only shows unlocked species (not all 59)
 
 signal closed()
 signal flip_animation_complete()
@@ -106,11 +107,11 @@ func open_and_scroll_to(mid: int, form: int, animate_flip: bool = false) -> void
 		_animate_card_flip(mid, form)
 
 func _scroll_to_mid(mid: int) -> void:
-	# Find the row for this MID
+	# Find the row index for this MID among UNLOCKED species only
 	var row_index = 0
-	var all_species = MonsterRegistry.get_all_species()
-	for i in range(all_species.size()):
-		if all_species[i].id == mid:
+	var unlocked_species = _get_unlocked_species_sorted()
+	for i in range(unlocked_species.size()):
+		if unlocked_species[i].id == mid:
 			row_index = i
 			break
 	
@@ -131,10 +132,22 @@ func _force_size(target: Vector2i) -> void:
 	# Also ensure max_size is set
 	max_size = target
 
+func _get_unlocked_species_sorted() -> Array[MonsterSpecies]:
+	## Get only unlocked species, sorted by MID
+	var result: Array[MonsterSpecies] = []
+	var unlocked_mids = GameState.unlocked_species.duplicate()
+	unlocked_mids.sort()
+	for mid in unlocked_mids:
+		var species = MonsterRegistry.get_species(mid)
+		if species:
+			result.append(species)
+	return result
+
 func _calculate_max_forms() -> void:
+	# Calculate max forms among UNLOCKED species only
 	max_forms = 1
-	var all_species = MonsterRegistry.get_all_species()
-	for species in all_species:
+	var unlocked_species = _get_unlocked_species_sorted()
+	for species in unlocked_species:
 		max_forms = maxi(max_forms, species.get_form_count())
 
 func _calculate_sizes() -> void:
@@ -168,7 +181,7 @@ func _refresh_display() -> void:
 		child.queue_free()
 	card_displays.clear()
 	
-	# Get collection stats
+	# Get collection stats (total forms across ALL species, not just unlocked)
 	var submitted_count = GameState.get_submitted_form_count()
 	var total_forms = MonsterRegistry.get_total_form_count()
 	
@@ -177,9 +190,9 @@ func _refresh_display() -> void:
 	# Update fixed column headers (outside scroll area)
 	_update_column_headers()
 	
-	# Create rows for each species
-	var all_species = MonsterRegistry.get_all_species()
-	for species in all_species:
+	# Create rows for each UNLOCKED species only
+	var unlocked_species = _get_unlocked_species_sorted()
+	for species in unlocked_species:
 		var row = _create_species_row(species)
 		chains_container.add_child(row)
 
