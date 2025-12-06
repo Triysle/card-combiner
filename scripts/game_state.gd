@@ -23,8 +23,8 @@ const BASE_HAND_SIZE: int = 10
 const BASE_DRAW_COOLDOWN: float = 10.0
 const PACK_SIZE: int = 5
 const SAVE_PATH: String = "user://savegame.cfg"
-const SAVE_VERSION: String = "0.6.1"
-const STARTING_SPECIES_COUNT: int = 10  # How many species unlocked at game start
+const SAVE_VERSION: String = "0.6.2"
+const STARTING_SPECIES_COUNT: int = 5  # How many species unlocked at game start
 
 # Tick timer
 var _tick_timer: Timer
